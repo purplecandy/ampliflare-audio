@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Audio files used for local testing
+/exports/
+*.mp3
+*.wav
+*.m4a
+*.flac
+*.ogg
+*.opus

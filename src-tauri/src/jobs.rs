@@ -19,6 +19,8 @@ pub enum Action {
     Convert { format: String, bitrate: Option<String> },
     /// Keep only the part between `start` and `end` seconds.
     Cut { start: f64, end: Option<f64> },
+    /// Break the file into pieces at these times, in seconds.
+    Split { points: Vec<f64> },
     /// Even out the volume and remove low rumble.
     Enhance { target_lufs: f64 },
 }
@@ -44,7 +46,7 @@ fn report(app: &AppHandle, id: &str, step: &str) {
 }
 
 /// Find ffmpeg. Apps opened from Finder get a tiny PATH, so check the usual spots too.
-fn find_ffmpeg() -> Option<String> {
+pub(crate) fn find_ffmpeg() -> Option<String> {
     let candidates = ["/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/usr/bin/ffmpeg"];
     for c in candidates {
         if Path::new(c).is_file() {
@@ -122,7 +124,7 @@ pub fn is_audio_file(path: String) -> bool {
         .unwrap_or(false)
 }
 
-/// Run one action on one file. Returns the path of the new file.
+/// Run one action on one file. Returns the paths of the new files.
 #[tauri::command]
 pub async fn run_job(
     app: AppHandle,
@@ -130,7 +132,7 @@ pub async fn run_job(
     input: String,
     output_dir: String,
     action: Action,
-) -> Result<String, String> {
+) -> Result<Vec<String>, String> {
     let input = PathBuf::from(input);
     let out_dir = PathBuf::from(output_dir);
     if !input.is_file() {
@@ -140,7 +142,10 @@ pub async fn run_job(
     let (stem, ext) = stem_and_ext(&input)?;
 
     match action {
-        Action::Denoise { strength } => denoise(&app, &id, &input, &out_dir, &stem, &ext, strength).await,
+        Action::Denoise { strength } => {
+            let out = denoise(&app, &id, &input, &out_dir, &stem, &ext, strength).await?;
+            Ok(vec![out])
+        }
         Action::Convert { format, bitrate } => {
             report(&app, &id, "Converting");
             let fmt = format.to_lowercase();
@@ -150,7 +155,7 @@ pub async fn run_job(
                 .args(encode_args(&fmt, bitrate.as_deref()))
                 .arg(&out);
             run(cmd, "ffmpeg").await?;
-            Ok(out.to_string_lossy().to_string())
+            Ok(vec![out.to_string_lossy().to_string()])
         }
         Action::Cut { start, end } => {
             report(&app, &id, "Cutting");
@@ -161,8 +166,9 @@ pub async fn run_job(
             }
             let cmd = cmd.args(encode_args(&ext, None)).arg(&out);
             run(cmd, "ffmpeg").await?;
-            Ok(out.to_string_lossy().to_string())
+            Ok(vec![out.to_string_lossy().to_string()])
         }
+        Action::Split { points } => split(&app, &id, &input, &out_dir, &stem, &ext, points).await,
         Action::Enhance { target_lufs } => {
             report(&app, &id, "Enhancing");
             let out = output_path(&out_dir, &stem, "-enhanced", &ext);
@@ -173,9 +179,44 @@ pub async fn run_job(
                 .args(encode_args(&ext, None))
                 .arg(&out);
             run(cmd, "ffmpeg").await?;
-            Ok(out.to_string_lossy().to_string())
+            Ok(vec![out.to_string_lossy().to_string()])
         }
     }
+}
+
+/// Cut the file at each point. Three points make four pieces.
+async fn split(
+    app: &AppHandle,
+    id: &str,
+    input: &Path,
+    out_dir: &Path,
+    stem: &str,
+    ext: &str,
+    points: Vec<f64>,
+) -> Result<Vec<String>, String> {
+    let mut points: Vec<f64> = points.into_iter().filter(|p| *p > 0.0).collect();
+    points.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    points.dedup();
+    if points.is_empty() {
+        return Err("Add at least one split point".into());
+    }
+
+    let mut outs = Vec::new();
+    let mut start = 0.0;
+    let pieces = points.len() + 1;
+    for (i, end) in points.iter().map(Some).chain(std::iter::once(None)).enumerate() {
+        report(app, id, &format!("Writing part {} of {pieces}", i + 1));
+        let out = output_path(out_dir, stem, &format!("-part{}", i + 1), ext);
+        let mut cmd = ffmpeg(app)?.args(["-i", &input.to_string_lossy(), "-ss", &start.to_string()]);
+        if let Some(end) = end {
+            cmd = cmd.args(["-to", &end.to_string()]);
+            start = *end;
+        }
+        let cmd = cmd.args(encode_args(ext, None)).arg(&out);
+        run(cmd, "ffmpeg").await?;
+        outs.push(out.to_string_lossy().to_string());
+    }
+    Ok(outs)
 }
 
 /// Noise removal is three steps:
@@ -232,4 +273,24 @@ async fn denoise(
 
     let _ = tokio::fs::remove_dir_all(&work).await;
     Ok(out.to_string_lossy().to_string())
+}
+
+/// Files and tab to open at start. Only works in debug builds and only when
+/// AMPLIFLARE_DEV_FILES (paths joined by ":") or AMPLIFLARE_DEV_ACTION is set.
+/// Lets us start the app already loaded, which makes testing quick.
+#[derive(Debug, Clone, Serialize)]
+pub struct DevStart {
+    pub files: Vec<String>,
+    pub action: Option<String>,
+}
+
+#[tauri::command]
+pub fn dev_start() -> DevStart {
+    if !cfg!(debug_assertions) {
+        return DevStart { files: vec![], action: None };
+    }
+    let files = std::env::var("AMPLIFLARE_DEV_FILES")
+        .map(|v| v.split(':').filter(|s| !s.is_empty()).map(String::from).collect())
+        .unwrap_or_default();
+    DevStart { files, action: std::env::var("AMPLIFLARE_DEV_ACTION").ok() }
 }
