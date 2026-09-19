@@ -15,6 +15,15 @@ Heavy work runs in sidecar binaries: `deep-filter` for noise reduction and
 
 ## Stack
 
-- Frontend: React + TypeScript + Vite in `src/`
-- Backend: Rust in `src-tauri/`, commands only spawn sidecars and report progress
+- Frontend: React + TypeScript + Vite in `src/`, styled with Pico CSS. Prefer plain
+  HTML tags and Pico classes over custom CSS. Keep `App.css` small.
+- Backend: Rust in `src-tauri/`. Commands spawn sidecars and report progress.
+  The one exception is `analyze.rs`, which computes the spectrogram in Rust.
 - Package manager: pnpm
+
+## Testing
+
+- `cd src-tauri && cargo test` for Rust. Tests need ffmpeg installed.
+- To see the UI with files loaded, run `pnpm tauri dev` with
+  `AMPLIFLARE_DEV_FILES=/a.wav:/b.mp3` and `AMPLIFLARE_DEV_ACTION=cut`.
+  This only works in debug builds.
