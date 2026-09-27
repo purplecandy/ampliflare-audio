@@ -1,0 +1,232 @@
+/* GNOME Adwaita colours, mapped onto Pico's variables.
+   Only the --adw-* values change between light and dark. */
+
+:root:not([data-theme]) {
+  --adw-accent-bg: #3584e4;
+  --adw-accent: #1c71d8;
+  --adw-destructive-bg: #e01b24;
+  --adw-destructive: #c30000;
+  --adw-success: #1b8553;
+  --adw-warning: #9c6e03;
+  --adw-window-bg: #fafafb;
+  --adw-view-bg: #ffffff;
+  --adw-sidebar-bg: #ebebed;
+  --adw-headerbar-bg: #ffffff;
+  --adw-card-bg: #ffffff;
+  --adw-tool-bg: rgba(255, 255, 255, 0.75);
+  --adw-fg: rgba(0, 0, 6, 0.8);
+  --adw-dim-fg: rgba(0, 0, 6, 0.55);
+  --adw-border: rgba(0, 0, 6, 0.15);
+  --adw-shade: rgba(0, 0, 6, 0.08);
+  --adw-shade-hover: rgba(0, 0, 6, 0.12);
+  --adw-shade-active: rgba(0, 0, 6, 0.18);
+  --adw-focus: rgba(53, 132, 228, 0.5);
+  --adw-radius: 8px;
+  --adw-radius-lg: 12px;
+
+  --pico-font-family-sans-serif: Cantarell, Inter, -apple-system, system-ui, "Segoe UI", sans-serif;
+  --pico-font-size: 90%;
+  --pico-line-height: 1.4;
+  --pico-font-weight: 400;
+  --pico-border-radius: var(--adw-radius);
+  --pico-border-width: 1px;
+  --pico-spacing: 0.75rem;
+  --pico-block-spacing-vertical: 0.75rem;
+  --pico-block-spacing-horizontal: 1rem;
+  --pico-form-element-spacing-vertical: 0.35rem;
+  --pico-form-element-spacing-horizontal: 0.65rem;
+  --pico-transition: 0.12s ease;
+
+  --pico-background-color: var(--adw-window-bg);
+  --pico-color: var(--adw-fg);
+  --pico-h1-color: var(--adw-fg);
+  --pico-h2-color: var(--adw-fg);
+  --pico-h3-color: var(--adw-fg);
+  --pico-h4-color: var(--adw-fg);
+  --pico-muted-color: var(--adw-dim-fg);
+  --pico-muted-border-color: var(--adw-border);
+  --pico-text-selection-color: rgba(53, 132, 228, 0.3);
+
+  --pico-primary: var(--adw-accent);
+  --pico-primary-background: var(--adw-accent-bg);
+  --pico-primary-border: var(--adw-accent-bg);
+  --pico-primary-hover: var(--adw-accent);
+  --pico-primary-hover-background: var(--adw-accent-bg);
+  --pico-primary-hover-border: var(--adw-accent-bg);
+  --pico-primary-focus: var(--adw-focus);
+  --pico-primary-underline: var(--adw-focus);
+  --pico-primary-inverse: #ffffff;
+  --pico-ins-color: var(--adw-success);
+  --pico-del-color: var(--adw-destructive);
+
+  --pico-card-background-color: var(--adw-card-bg);
+  --pico-card-border-color: var(--adw-border);
+  --pico-card-box-shadow: none;
+  --pico-card-sectioning-background-color: transparent;
+
+  --pico-form-element-background-color: var(--adw-view-bg);
+  --pico-form-element-border-color: var(--adw-border);
+  --pico-form-element-color: var(--adw-fg);
+  --pico-form-element-placeholder-color: var(--adw-dim-fg);
+  --pico-form-element-active-background-color: var(--adw-view-bg);
+  --pico-form-element-active-border-color: var(--adw-accent-bg);
+  --pico-form-element-focus-color: var(--adw-focus);
+  --pico-form-element-disabled-opacity: 0.5;
+  --pico-range-border-color: var(--adw-shade-active);
+  --pico-range-active-border-color: var(--adw-accent-bg);
+  --pico-range-thumb-color: var(--adw-view-bg);
+  --pico-range-thumb-border-color: rgba(0, 0, 6, 0.3);
+  --pico-range-thumb-active-color: var(--adw-view-bg);
+
+  --pico-code-background-color: var(--adw-shade);
+  --pico-code-color: var(--adw-fg);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --adw-accent: #78aeed;
+    --adw-destructive: #ff7b63;
+    --adw-success: #8ff0a4;
+    --adw-warning: #f8e45c;
+    --adw-window-bg: #242424;
+    --adw-view-bg: #1e1e1e;
+    --adw-sidebar-bg: #303030;
+    --adw-headerbar-bg: #303030;
+    --adw-card-bg: #303030;
+    --adw-tool-bg: rgba(255, 255, 255, 0.08);
+    --adw-fg: #ffffff;
+    --adw-dim-fg: rgba(255, 255, 255, 0.55);
+    --adw-border: rgba(255, 255, 255, 0.15);
+    --adw-shade: rgba(255, 255, 255, 0.1);
+    --adw-shade-hover: rgba(255, 255, 255, 0.15);
+    --adw-shade-active: rgba(255, 255, 255, 0.3);
+    --pico-range-thumb-border-color: rgba(255, 255, 255, 0.3);
+  }
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Buttons. Flat grey like GTK, with the usual GNOME styles on top.
+   Pico styles [type="button"], so every rule here matches on that too. */
+:is(button, [type="button"], [role="button"]) {
+  --pico-background-color: var(--adw-shade);
+  --pico-border-color: transparent;
+  --pico-color: var(--adw-fg);
+  --pico-box-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.15rem;
+  margin: 0;
+  padding: 0.3rem 1rem;
+  border-radius: var(--adw-radius);
+  font-size: inherit;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+:is(button, [type="button"], [role="button"]):is(:hover, :active, :focus) {
+  --pico-background-color: var(--adw-shade-hover);
+  --pico-border-color: transparent;
+  --pico-color: var(--adw-fg);
+  --pico-box-shadow: none;
+}
+:is(button, [type="button"], [role="button"]):active {
+  --pico-background-color: var(--adw-shade-active);
+}
+:is(button, [type="button"], [role="button"]):focus-visible {
+  outline: 2px solid var(--adw-focus);
+  outline-offset: 1px;
+}
+:is(button, [type="button"], [role="button"])[disabled] {
+  opacity: 0.5;
+}
+
+button.suggested {
+  --pico-background-color: var(--adw-accent-bg);
+  --pico-color: #ffffff;
+}
+button.destructive {
+  --pico-background-color: var(--adw-destructive-bg);
+  --pico-color: #ffffff;
+}
+button.suggested:is(:hover, :active, :focus),
+button.destructive:is(:hover, :active, :focus) {
+  --pico-color: #ffffff;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.12));
+}
+button.suggested:is(:hover, :active, :focus) {
+  --pico-background-color: var(--adw-accent-bg);
+}
+button.destructive:is(:hover, :active, :focus) {
+  --pico-background-color: var(--adw-destructive-bg);
+}
+
+:is(button, [role="button"]).flat {
+  --pico-background-color: transparent;
+}
+:is(button, [role="button"]).flat:is(:hover, :focus) {
+  --pico-background-color: var(--adw-shade);
+}
+:is(button, [role="button"]).flat:active {
+  --pico-background-color: var(--adw-shade-hover);
+}
+:is(button, [role="button"]).circular {
+  width: 2.15rem;
+  padding: 0;
+  border-radius: 50%;
+}
+button.pill {
+  padding: 0.55rem 1.75rem;
+  border-radius: 999px;
+}
+
+/* Linked buttons share one rounded outline. */
+[role="group"] {
+  width: auto;
+  margin: 0;
+  box-shadow: none;
+}
+[role="group"] > button:not(:first-child) {
+  border-left: 1px solid var(--adw-border);
+}
+
+/* Cards */
+article {
+  margin-bottom: var(--pico-block-spacing-vertical);
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--adw-border);
+  border-radius: var(--adw-radius-lg);
+}
+
+/* Form bits */
+input:not([type="checkbox"], [type="radio"], [type="range"]),
+select {
+  margin-bottom: 0;
+}
+input[type="range"] {
+  margin-bottom: 0;
+}
+label {
+  margin-bottom: 0;
+}
+code {
+  padding: 0.1rem 0.35rem;
+  border-radius: 5px;
+  font-size: 0.9em;
+}
+
+.icon {
+  flex: none;
+}
+.icon.spin {
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
