@@ -34,3 +34,4 @@ dist-ssr
 
 # Written by CI when there is no updater key
 no-updater.conf.json
+/bundles/
