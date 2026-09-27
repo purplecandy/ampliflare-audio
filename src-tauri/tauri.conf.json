@@ -42,6 +42,52 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "createUpdaterArtifacts": true,
+    "publisher": "Ampliflare",
+    "copyright": "Copyright © 2026 Ampliflare",
+    "homepage": "https://github.com/purplecandy/ampliflare-audio",
+    "category": "Music",
+    "shortDescription": "Simple audio toolkit with on device noise reduction",
+    "longDescription": "Drop in audio files, pick an action, get clean files back. Remove noise, even out loudness, cut, split and convert. Everything runs on your machine.",
+    "macOS": {
+      "minimumSystemVersion": "13.0",
+      "hardenedRuntime": true
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    },
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": true
+      },
+      "deb": {
+        "recommends": [
+          "ffmpeg",
+          "gstreamer1.0-plugins-good",
+          "gstreamer1.0-libav"
+        ],
+        "section": "sound"
+      },
+      "rpm": {
+        "recommends": [
+          "ffmpeg",
+          "gstreamer1-plugins-good"
+        ]
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEFCNThGRTFFMEIyQjI5NEMKUldSTUtTc0xIdjVZcTZsQlNQRTFyRTNTazVabmlJcEF5aURTVjhGUk5iaEVqdjFKY0IzaTIrcW0K",
+      "endpoints": [
+        "https://github.com/purplecandy/ampliflare-audio/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

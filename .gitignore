@@ -31,3 +31,6 @@ dist-ssr
 *.flac
 *.ogg
 *.opus
+
+# Written by CI when there is no updater key
+no-updater.conf.json
