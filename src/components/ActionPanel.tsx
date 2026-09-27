@@ -1,20 +1,21 @@
 import type { ReactNode } from "react";
+import type { IconName } from "./Icon";
 import { BITRATES, FORMATS, type Action, type ActionKind } from "../types";
 
 interface Props {
   action: Action;
   onChange: (a: Action) => void;
   disabled: boolean;
-  /** Cut and split draw their controls here, under the tabs. */
+  /** Cut and split draw their editor here, under the settings. */
   children?: ReactNode;
 }
 
-const TABS: { kind: ActionKind; label: string; hint: string }[] = [
-  { kind: "denoise", label: "Remove noise", hint: "Cleans up fans, hum, traffic and room noise." },
-  { kind: "enhance", label: "Enhance", hint: "Evens out volume and drops low rumble." },
-  { kind: "cut", label: "Cut", hint: "Keeps only the part between two points." },
-  { kind: "split", label: "Split", hint: "Breaks one file into pieces at the points you mark." },
-  { kind: "convert", label: "Convert", hint: "Changes the file format." },
+export const TOOLS: { kind: ActionKind; label: string; hint: string; icon: IconName }[] = [
+  { kind: "denoise", label: "Remove noise", hint: "Cleans up fans, hum, traffic and room noise.", icon: "noise" },
+  { kind: "enhance", label: "Enhance", hint: "Evens out volume and drops low rumble.", icon: "enhance" },
+  { kind: "cut", label: "Cut", hint: "Keeps only the part between two points.", icon: "cut" },
+  { kind: "split", label: "Split", hint: "Breaks one file into pieces at the points you mark.", icon: "split" },
+  { kind: "convert", label: "Convert", hint: "Changes the file format.", icon: "convert" },
 ];
 
 export function defaultAction(kind: ActionKind): Action {
@@ -33,84 +34,111 @@ export function defaultAction(kind: ActionKind): Action {
 }
 
 export function ActionPanel({ action, onChange, disabled, children }: Props) {
-  const tab = TABS.find((t) => t.kind === action.kind)!;
+  const hasSettings = action.kind === "denoise" || action.kind === "enhance" || action.kind === "convert";
 
   return (
-    <article className="tight">
-      <div role="group" className="tabs">
-        {TABS.map((t) => (
-          <button
-            key={t.kind}
-            type="button"
-            className={t.kind === action.kind ? "" : "outline secondary"}
-            aria-pressed={t.kind === action.kind}
-            disabled={disabled}
-            onClick={() => t.kind !== action.kind && onChange(defaultAction(t.kind))}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-      <p className="muted hint">{tab.hint}</p>
+    <>
+      {hasSettings && (
+        <>
+          <p className="section-label">Settings</p>
+          <div className="boxed-list">
+            {action.kind === "denoise" && (
+              <div className="row-item">
+                <div className="row-text">
+                  <label className="row-title" htmlFor="strength">
+                    Strength
+                  </label>
+                  <span className="row-subtitle">100 removes as much noise as possible. Lower keeps more of the original.</span>
+                </div>
+                <div className="control">
+                  <input
+                    id="strength"
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={action.strength}
+                    disabled={disabled}
+                    onChange={(e) => onChange({ ...action, strength: Number(e.target.value) })}
+                  />
+                  <span className="value">{action.strength}</span>
+                </div>
+              </div>
+            )}
 
-      {action.kind === "denoise" && (
-        <label>
-          Strength: <strong>{action.strength}</strong>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            step={5}
-            value={action.strength}
-            disabled={disabled}
-            onChange={(e) => onChange({ ...action, strength: Number(e.target.value) })}
-          />
-          <small>100 removes as much noise as possible. Lower keeps more of the original sound.</small>
-        </label>
-      )}
+            {action.kind === "enhance" && (
+              <div className="row-item">
+                <div className="row-text">
+                  <label className="row-title" htmlFor="lufs">
+                    Target loudness
+                  </label>
+                  <span className="row-subtitle">Pick what the result is for.</span>
+                </div>
+                <div className="control">
+                  <select
+                    id="lufs"
+                    value={action.target_lufs}
+                    disabled={disabled}
+                    onChange={(e) => onChange({ ...action, target_lufs: Number(e.target.value) })}
+                  >
+                    <option value={-14}>-14 LUFS, music streaming</option>
+                    <option value={-16}>-16 LUFS, podcast</option>
+                    <option value={-19}>-19 LUFS, audiobook</option>
+                    <option value={-23}>-23 LUFS, broadcast</option>
+                  </select>
+                </div>
+              </div>
+            )}
 
-      {action.kind === "enhance" && (
-        <label>
-          Target loudness
-          <select
-            value={action.target_lufs}
-            disabled={disabled}
-            onChange={(e) => onChange({ ...action, target_lufs: Number(e.target.value) })}
-          >
-            <option value={-14}>-14 LUFS, music streaming</option>
-            <option value={-16}>-16 LUFS, podcast</option>
-            <option value={-19}>-19 LUFS, audiobook</option>
-            <option value={-23}>-23 LUFS, broadcast</option>
-          </select>
-        </label>
-      )}
-
-      {action.kind === "convert" && (
-        <div className="grid">
-          <label>
-            Format
-            <select value={action.format} disabled={disabled} onChange={(e) => onChange({ ...action, format: e.target.value })}>
-              {FORMATS.map((f) => (
-                <option key={f} value={f}>{f}</option>
-              ))}
-            </select>
-          </label>
-          {["mp3", "m4a", "ogg", "opus"].includes(action.format) ? (
-            <label>
-              Quality
-              <select value={action.bitrate ?? "192k"} disabled={disabled} onChange={(e) => onChange({ ...action, bitrate: e.target.value })}>
-                {BITRATES.map((b) => (
-                  <option key={b} value={b}>{b}</option>
-                ))}
-              </select>
-            </label>
-          ) : (
-            <div />
-          )}
-        </div>
+            {action.kind === "convert" && (
+              <>
+                <div className="row-item">
+                  <div className="row-text">
+                    <label className="row-title" htmlFor="format">
+                      Format
+                    </label>
+                  </div>
+                  <div className="control">
+                    <select id="format" value={action.format} disabled={disabled} onChange={(e) => onChange({ ...action, format: e.target.value })}>
+                      {FORMATS.map((f) => (
+                        <option key={f} value={f}>
+                          {f}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                {["mp3", "m4a", "ogg", "opus"].includes(action.format) && (
+                  <div className="row-item">
+                    <div className="row-text">
+                      <label className="row-title" htmlFor="bitrate">
+                        Quality
+                      </label>
+                      <span className="row-subtitle">Higher sounds better and makes a bigger file.</span>
+                    </div>
+                    <div className="control">
+                      <select
+                        id="bitrate"
+                        value={action.bitrate ?? "192k"}
+                        disabled={disabled}
+                        onChange={(e) => onChange({ ...action, bitrate: e.target.value })}
+                      >
+                        {BITRATES.map((b) => (
+                          <option key={b} value={b}>
+                            {b}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </>
       )}
 
       {children}
-    </article>
+    </>
   );
 }

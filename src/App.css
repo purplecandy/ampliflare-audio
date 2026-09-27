@@ -1,176 +1,355 @@
-/* Pico does most of the work. These are the few things a desktop app needs on top. */
+/* Layout only. Colours live in theme.css. */
 
-:root {
-  --pico-font-size: 93.75%;
-  --pico-spacing: 0.9rem;
-  --pico-block-spacing-vertical: 1rem;
+html,
+body,
+#root {
+  height: 100%;
 }
-
-main.container {
-  max-width: 960px;
-  padding-top: 1.25rem;
-  padding-bottom: 2rem;
-}
-
-hgroup {
-  margin-bottom: 1rem;
-}
-hgroup h1 {
-  font-size: 1.5rem;
-  margin-bottom: 0.15rem;
-}
-hgroup p {
-  margin: 0;
-}
-
-.muted {
-  color: var(--pico-muted-color);
-}
-.hint {
-  margin: 0.5rem 0 0.75rem;
-}
-
-/* Buttons inside these cards sit in rows, so drop Pico's form spacing. */
-.tight button,
-.tight [role="group"],
-.tight input,
-.tight select,
-.tight label {
-  margin-bottom: 0;
-}
-.tight label {
-  margin-bottom: 0;
-}
-.tight .grid label input,
-.tight .grid label select {
-  margin-top: 0.25rem;
-}
-
-article.notice {
-  padding: 0.75rem 1rem;
-  border-left: 4px solid var(--pico-del-color);
-}
-
-/* Drop zone */
-article.dropzone {
-  text-align: center;
-  padding: 1.75rem 1rem;
-  border: 2px dashed var(--pico-muted-border-color);
-  cursor: pointer;
-  user-select: none;
-}
-article.dropzone:hover,
-article.dropzone.active {
-  border-color: var(--pico-primary);
-  background: var(--pico-primary-focus);
-}
-
-/* File list */
-article.files {
-  padding: 0;
+body {
   overflow: hidden;
 }
-article.files header {
+
+.window {
   display: flex;
+  height: 100vh;
+}
+
+/* Header bars */
+.headerbar {
+  display: flex;
+  flex: none;
   align-items: center;
   gap: 0.5rem;
+  min-height: 47px;
+  padding: 0 0.75rem;
+}
+.headerbar-title {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  line-height: 1.25;
+  text-align: center;
+}
+.title {
+  font-weight: 700;
+}
+.subtitle {
+  font-size: 0.8rem;
+  color: var(--adw-dim-fg);
+}
+.headerbar-end,
+.headerbar-start {
+  display: flex;
+  flex: 1;
+  gap: 0.4rem;
+}
+.headerbar-end {
+  justify-content: flex-end;
+}
+
+/* Sidebar */
+.sidebar {
+  display: flex;
+  flex: 0 0 236px;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--adw-sidebar-bg);
+  border-right: 1px solid var(--adw-border);
+}
+.sidebar .headerbar {
+  justify-content: center;
+}
+.toolgrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.35rem;
+  padding: 0.25rem 0.75rem 0.5rem;
+}
+.toolgrid button,
+.toolgrid button:is(:hover, :focus) {
+  --pico-background-color: var(--adw-tool-bg);
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.6rem 0.25rem 0.45rem;
+  border-radius: var(--adw-radius-lg);
+  font-size: 0.78rem;
+  font-weight: 400;
+}
+.toolgrid button:is(:hover, :focus) {
+  background-image: linear-gradient(var(--adw-shade), var(--adw-shade));
+}
+.toolgrid button .icon {
+  width: 18px;
+  height: 18px;
+}
+.sidebar nav {
+  flex: 1;
+  padding: 0 0.5rem 0.75rem;
+  overflow-y: auto;
+}
+.sidebar-footer {
+  padding: 0.5rem;
+  border-top: 1px solid var(--adw-border);
+}
+.sidebar nav ul {
   margin: 0;
-  padding: 0.6rem 1rem;
+  padding: 0;
+  list-style: none;
 }
-article.files header .right {
-  margin-left: auto;
-}
-article.files table {
+.sidebar nav li {
   margin: 0;
+  padding: 0;
 }
-article.files td {
-  vertical-align: middle;
+.section-label {
+  margin: 0.9rem 0.5rem 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--adw-dim-fg);
 }
-article.files tr:last-child td {
-  border-bottom: 0;
+
+button.row {
+  --pico-background-color: transparent;
+  justify-content: flex-start;
+  gap: 0.65rem;
+  width: 100%;
+  min-height: 2.35rem;
+  padding: 0.4rem 0.75rem;
+  font-weight: 400;
+  text-align: left;
 }
-article.files tr.selectable {
+button.row .icon {
+  color: var(--adw-dim-fg);
+}
+button.row:is(:hover, :focus) {
+  --pico-background-color: var(--adw-shade);
+}
+button.row.active,
+button.row.active:is(:hover, :focus) {
+  --pico-background-color: var(--adw-shade-hover);
+}
+button.row.active .icon {
+  color: var(--adw-fg);
+}
+
+/* Content pane */
+.content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--adw-view-bg);
+}
+.content > .headerbar {
+  background: var(--adw-headerbar-bg);
+  border-bottom: 1px solid var(--adw-border);
+}
+.page {
+  flex: 1;
+  padding: 1rem 1.5rem 2rem;
+  overflow-y: auto;
+}
+.page-inner {
+  max-width: 780px;
+  margin: 0 auto;
+}
+.page.drop-active {
+  outline: 2px dashed var(--adw-accent-bg);
+  outline-offset: -0.75rem;
+}
+
+.banner {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 1rem;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--adw-accent-bg) 30%, var(--adw-window-bg));
+  border-bottom: 1px solid var(--adw-border);
+}
+.banner code {
+  font-weight: 400;
+}
+
+/* Empty state */
+.status-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 4rem 1rem;
+  text-align: center;
+}
+.status-page .status-icon {
+  width: 128px;
+  height: 128px;
+  margin-bottom: 0.75rem;
+  color: var(--adw-dim-fg);
+  opacity: 0.5;
+}
+.status-page h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+.status-page p {
+  max-width: 30rem;
+  margin: 0 0 1.25rem;
+  color: var(--adw-dim-fg);
+}
+
+/* Boxed lists, like AdwPreferencesGroup rows */
+.boxed-list {
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+  background: var(--adw-card-bg);
+  border: 1px solid var(--adw-border);
+  border-radius: var(--adw-radius-lg);
+}
+.row-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.25rem;
+  padding: 0.55rem 0.75rem 0.55rem 1rem;
+}
+.row-item + .row-item {
+  border-top: 1px solid var(--adw-border);
+}
+.row-item.activatable {
   cursor: pointer;
 }
-article.files tr[aria-selected="true"] td {
-  background: var(--pico-primary-focus);
+.row-item.activatable:hover {
+  background: var(--adw-shade);
 }
-article.files td.actions {
-  text-align: right;
-  white-space: nowrap;
-  width: 1%;
+.row-item[aria-selected="true"],
+.row-item[aria-selected="true"]:hover {
+  background: var(--adw-shade-hover);
+  box-shadow: inset 3px 0 var(--adw-accent-bg);
 }
-article.files td.actions button {
-  margin-left: 0.4rem;
+.row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
 }
-.file-name {
+.row-title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  display: inline-block;
-  max-width: 100%;
 }
-
-button.small {
-  padding: 0.25rem 0.6rem;
-  font-size: 0.85em;
-}
-
-.status-running {
-  color: var(--pico-primary);
-}
-.status-done {
-  color: var(--pico-ins-color);
-}
-.status-error {
-  color: var(--pico-del-color);
-}
-
-/* Tabs */
-.tabs {
-  width: auto;
-}
-.tabs button {
+.row-subtitle {
+  overflow: hidden;
+  font-size: 0.8rem;
+  color: var(--adw-dim-fg);
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+.row-icon {
+  display: flex;
+  color: var(--adw-dim-fg);
+}
+.row-icon.done {
+  color: var(--adw-success);
+}
+.row-icon.error {
+  color: var(--adw-destructive);
+}
+.row-icon.running {
+  color: var(--adw-accent);
+}
+.row-actions,
+.control {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+.control input:not([type="range"]),
+.control select {
+  width: auto;
+  min-width: 13rem;
+}
+.control input[type="range"] {
+  width: 12rem;
+}
+.control .value {
+  min-width: 2.2rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.list-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0.25rem 0.5rem 0.4rem;
+}
+
+button.dropstrip {
+  --pico-background-color: transparent;
+  width: 100%;
+  margin-bottom: 0.75rem;
+  padding: 0.7rem;
+  border: 2px dashed var(--adw-border);
+  border-radius: var(--adw-radius-lg);
+  font-weight: 400;
+  color: var(--adw-dim-fg);
+}
+button.dropstrip:is(:hover, :focus),
+button.dropstrip.active {
+  --pico-background-color: var(--adw-shade);
+  border-color: var(--adw-accent-bg);
+  color: var(--adw-fg);
+}
+
+.status-error {
+  color: var(--adw-destructive);
 }
 
 /* Editor */
-.editor {
-  margin-top: 0.75rem;
-}
 .spectrogram canvas {
   display: block;
   width: 100%;
-  border-radius: var(--pico-border-radius);
+  border-radius: var(--adw-radius);
   background: #08061e;
   touch-action: none;
 }
 .editor-bar {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: center;
   gap: 0.75rem;
-  margin: 0.75rem 0 0.4rem;
+  margin: 0.75rem 0 0.5rem;
 }
 .playgroup {
-  flex: 0 0 auto;
-  width: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
-.playgroup .time {
+.time {
+  min-width: 7rem;
+  color: var(--adw-dim-fg);
   font-variant-numeric: tabular-nums;
-  min-width: 9.5rem;
 }
-.cut-grid {
-  flex: 1;
-  align-items: end;
-  grid-template-columns: 1fr 1fr auto;
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.78rem;
+  color: var(--adw-dim-fg);
 }
-.set-buttons {
-  width: auto;
+.field input {
+  width: 6.5rem;
 }
 .split-row {
-  flex: 1;
   display: flex;
+  flex: 1;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
@@ -178,48 +357,29 @@ button.small {
 .chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
   align-items: center;
+  gap: 0.4rem;
 }
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.15rem 0.3rem 0.15rem 0.6rem;
-  border: 1px solid var(--pico-muted-border-color);
+  gap: 0.2rem;
+  padding: 0.15rem 0.25rem 0.15rem 0.7rem;
+  background: var(--adw-shade);
   border-radius: 999px;
   font-size: 0.85em;
   font-variant-numeric: tabular-nums;
 }
 .chip button {
-  padding: 0 0.35rem;
-  line-height: 1.3;
-  font-size: 0.85em;
-  background: none;
-  border: 0;
-  color: var(--pico-muted-color);
+  width: 1.5rem;
+  min-height: 1.5rem;
 }
-.chip button:hover {
-  color: var(--pico-del-color);
+.chip button .icon {
+  width: 12px;
+  height: 12px;
 }
-
-/* Run bar */
-article.runbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-.outdir {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  min-width: 0;
-}
-.outdir button {
-  max-width: 320px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.hint {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--adw-dim-fg);
 }
