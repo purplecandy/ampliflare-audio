@@ -61,9 +61,17 @@ pnpm tauri build
 
 The result lands in `src-tauri/target/release/bundle/`.
 
+CI builds, signs and notarizes every pull request. Pushing a `v*` tag publishes a
+release with an in-app updater feed. See [docs/releasing.md](docs/releasing.md).
+
+## Install on Linux
+
+```sh
+curl -fsSL https://github.com/purplecandy/ampliflare-audio/releases/latest/download/install.sh | bash
+```
+
 ## Not done yet
 
 - Bundle a static ffmpeg so users do not need to install it. Use an LGPL build.
-- Code signing and notarization for macOS.
 - Dereverb. Needs a second model and a real inference runtime.
-- Windows build and testing.
+- Windows testing. CI builds it, but nobody has run it yet. It is not Authenticode signed.

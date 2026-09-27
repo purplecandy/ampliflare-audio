@@ -1,0 +1,90 @@
+# Pushing a tag like v0.2.0 builds every platform, signed and notarized,
+# and publishes a GitHub release with latest.json for the in-app updater.
+# A tag with a dash, like v0.2.0-beta.1, becomes a pre-release. The updater
+# only follows the latest full release, so pre-releases never reach users by themselves.
+# The tag must equal "v" plus the version in package.json, Cargo.toml and tauri.conf.json.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Check tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: node scripts/ci/check-version.mjs "$GITHUB_REF_NAME"
+
+  build:
+    needs: verify
+    uses: ./.github/workflows/build.yml
+    with:
+      release: true
+    secrets: inherit
+
+  publish:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ampliflare-audio-*
+          path: dist
+          merge-multiple: true
+
+      - name: Start a draft release
+        run: |
+          # A rerun finds the draft from the last try and keeps going.
+          if ! gh release view "$TAG" -R "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            pre=()
+            [[ "$TAG" == *-* ]] && pre=(--prerelease)
+            gh release create "$TAG" -R "$GITHUB_REPOSITORY" --draft --verify-tag "${pre[@]}" \
+              --title "Ampliflare Audio ${TAG#v}" --generate-notes
+          fi
+          gh release view "$TAG" -R "$GITHUB_REPOSITORY" --json body --jq .body > "$RUNNER_TEMP/notes.md"
+
+      - name: Add install script, icon and update manifest
+        run: |
+          cp scripts/install.sh dist/install.sh
+          cp src-tauri/icons/icon.png dist/icon.png
+          rm -f dist/*.sha256
+          node scripts/ci/make-release-manifest.mjs dist "$GITHUB_REPOSITORY" "$RUNNER_TEMP/notes.md"
+          cat dist/latest.json
+          # Every platform must be able to update, or the release stops here.
+          for p in darwin-aarch64 darwin-x86_64 windows-x86_64 linux-x86_64 linux-aarch64; do
+            jq -e --arg p "$p" '.platforms[$p].signature | length > 0' dist/latest.json > /dev/null \
+              || { echo "::error::latest.json has no signed build for $p"; exit 1; }
+          done
+          ls -la dist
+
+      - name: Upload and publish
+        run: |
+          gh release upload "$TAG" -R "$GITHUB_REPOSITORY" dist/* --clobber
+          # Publishing last means latest.json only goes live once every file is there.
+          if [[ "$TAG" == *-* ]]; then
+            gh release edit "$TAG" -R "$GITHUB_REPOSITORY" --draft=false --latest=false
+          else
+            gh release edit "$TAG" -R "$GITHUB_REPOSITORY" --draft=false --latest
+          fi
