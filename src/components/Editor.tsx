@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { Icon } from "./Icon";
 import { Spectrogram } from "./Spectrogram";
 import { fmtTime, type Action, type Analysis, type QueuedFile } from "../types";
 
@@ -82,88 +83,144 @@ export function Editor({ file, analysis, loading, error, action, onChange, disab
     onChange({ kind: "split", points: points.map(round) });
   }
 
-  if (!file) return <p className="muted">Add a file and click it in the list to edit it.</p>;
-  if (error) return <p className="status-error">Could not read this file: {error}</p>;
-  if (loading || !analysis) return <p aria-busy="true">Reading {file.name}…</p>;
+  const title = action.kind === "cut" ? "Cut" : "Split";
+
+  if (!file) {
+    return (
+      <>
+        <p className="section-label">{title}</p>
+        <article className="subtitle">Add a file and click it in the list to edit it.</article>
+      </>
+    );
+  }
+  if (error) {
+    return (
+      <>
+        <p className="section-label">{title}</p>
+        <article className="status-error">Could not read this file: {error}</article>
+      </>
+    );
+  }
+  if (loading || !analysis) {
+    return (
+      <>
+        <p className="section-label">{title}</p>
+        <article className="subtitle" aria-busy="true">
+          Reading {file.name}…
+        </article>
+      </>
+    );
+  }
 
   return (
-    <div className="editor">
-      <audio
-        ref={audioRef}
-        src={convertFileSrc(file.path)}
-        preload="auto"
-        onEnded={() => setPlaying(false)}
-        onError={() => setCanPlay(false)}
-      />
+    <>
+      <p className="section-label">{title}</p>
+      <article className="editor">
+        <audio
+          ref={audioRef}
+          src={convertFileSrc(file.path)}
+          preload="auto"
+          onEnded={() => setPlaying(false)}
+          onError={() => setCanPlay(false)}
+        />
 
-      <Spectrogram
-        analysis={analysis}
-        mode={action.kind}
-        range={range}
-        markers={markers}
-        playhead={playhead}
-        onRange={setRange}
-        onMarkers={setMarkers}
-        onSeek={seek}
-      />
+        <Spectrogram
+          analysis={analysis}
+          mode={action.kind}
+          range={range}
+          markers={markers}
+          playhead={playhead}
+          onRange={setRange}
+          onMarkers={setMarkers}
+          onSeek={seek}
+        />
 
-      <div className="editor-bar">
-        <div role="group" className="playgroup">
-          <button type="button" className="outline" onClick={togglePlay} disabled={!canPlay} title={canPlay ? "" : "This format cannot be played here"}>
-            {playing ? "Pause" : "Play"}
-          </button>
-          <button type="button" className="outline secondary time" disabled>
-            {fmtTime(playhead)} / {fmtTime(duration)}
-          </button>
-        </div>
-
-        {action.kind === "cut" && (
-          <div className="grid cut-grid">
-            <label>
-              Start
-              <input type="number" min={0} max={range.end - 0.1} step={0.1} value={round(range.start)} disabled={disabled}
-                onChange={(e) => setRange({ start: clamp(Number(e.target.value), 0, range.end - 0.1), end: range.end })} />
-            </label>
-            <label>
-              End
-              <input type="number" min={range.start + 0.1} max={duration} step={0.1} value={round(range.end)} disabled={disabled}
-                onChange={(e) => setRange({ start: range.start, end: clamp(Number(e.target.value), range.start + 0.1, duration) })} />
-            </label>
-            <div role="group" className="set-buttons">
-              <button type="button" className="outline secondary" disabled={disabled} onClick={() => setRange({ start: Math.min(playhead, range.end - 0.1), end: range.end })}>
-                Start here
-              </button>
-              <button type="button" className="outline secondary" disabled={disabled} onClick={() => setRange({ start: range.start, end: Math.max(playhead, range.start + 0.1) })}>
-                End here
-              </button>
-            </div>
-          </div>
-        )}
-
-        {action.kind === "split" && (
-          <div className="split-row">
-            <button type="button" className="outline secondary" disabled={disabled} onClick={() => setMarkers([...markers, playhead].sort((a, b) => a - b))}>
-              Add split here
+        <div className="editor-bar">
+          <div className="playgroup">
+            <button
+              type="button"
+              className="circular"
+              onClick={togglePlay}
+              disabled={!canPlay}
+              aria-label={playing ? "Pause" : "Play"}
+              title={canPlay ? "" : "This format cannot be played here"}
+            >
+              <Icon name={playing ? "pause" : "play"} />
             </button>
-            <div className="chips">
-              {markers.length === 0 && <small className="muted">No split points yet. Double click the picture or press the button.</small>}
-              {markers.map((t, i) => (
-                <span key={`${i}-${t}`} className="chip">
-                  {i + 1} · {fmtTime(t)}
-                  <button type="button" aria-label="Remove" disabled={disabled} onClick={() => setMarkers(markers.filter((_, j) => j !== i))}>
-                    ✕
-                  </button>
-                </span>
-              ))}
-            </div>
+            <span className="time">
+              {fmtTime(playhead)} / {fmtTime(duration)}
+            </span>
           </div>
-        )}
-      </div>
-      <small className="muted">
-        Drag the handles on the picture. Click anywhere to move the playhead.
-        {action.kind === "split" ? " Double click to add a split point." : ""}
-      </small>
-    </div>
+
+          {action.kind === "cut" && (
+            <>
+              <label className="field">
+                Start
+                <input
+                  type="number"
+                  min={0}
+                  max={range.end - 0.1}
+                  step={0.1}
+                  value={round(range.start)}
+                  disabled={disabled}
+                  onChange={(e) => setRange({ start: clamp(Number(e.target.value), 0, range.end - 0.1), end: range.end })}
+                />
+              </label>
+              <label className="field">
+                End
+                <input
+                  type="number"
+                  min={range.start + 0.1}
+                  max={duration}
+                  step={0.1}
+                  value={round(range.end)}
+                  disabled={disabled}
+                  onChange={(e) => setRange({ start: range.start, end: clamp(Number(e.target.value), range.start + 0.1, duration) })}
+                />
+              </label>
+              <div role="group">
+                <button type="button" disabled={disabled} onClick={() => setRange({ start: Math.min(playhead, range.end - 0.1), end: range.end })}>
+                  Start here
+                </button>
+                <button type="button" disabled={disabled} onClick={() => setRange({ start: range.start, end: Math.max(playhead, range.start + 0.1) })}>
+                  End here
+                </button>
+              </div>
+            </>
+          )}
+
+          {action.kind === "split" && (
+            <div className="split-row">
+              <button type="button" disabled={disabled} onClick={() => setMarkers([...markers, playhead].sort((a, b) => a - b))}>
+                <Icon name="plus" />
+                Add split here
+              </button>
+              <div className="chips">
+                {markers.length === 0 && <small className="subtitle">No split points yet. Double click the picture or press the button.</small>}
+                {markers.map((t, i) => (
+                  <span key={`${i}-${t}`} className="chip">
+                    {i + 1} · {fmtTime(t)}
+                    <button
+                      type="button"
+                      className="flat circular"
+                      aria-label="Remove"
+                      disabled={disabled}
+                      onClick={() => setMarkers(markers.filter((_, j) => j !== i))}
+                    >
+                      <Icon name="close" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        <small className="hint">
+          Drag the handles on the picture. Click anywhere to move the playhead.
+          {action.kind === "split" ? " Double click to add a split point." : ""}
+        </small>
+      </article>
+    </>
   );
 }
 
