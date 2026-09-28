@@ -1,9 +1,20 @@
-/* GNOME Adwaita colours, mapped onto Pico's variables.
-   Only the --adw-* values change between light and dark. */
+/* Colours for two styles, GNOME (the default) and macOS, each in light, dim and dark.
+   The --adw-* names come from GNOME Adwaita and are mapped onto Pico's variables
+   once, in the first block. Every other block only changes --adw-* values.
 
-:root:not([data-theme]) {
-  --adw-accent-bg: #3584e4;
-  --adw-accent: #1c71d8;
+   settings.ts and index.html set these on <html>:
+     data-style   "mac" or "gnome"
+     data-scheme  "light", "dim" or "dark"
+     data-theme   "light" or "dark", for Pico
+     data-accent  a name from ACCENTS in settings.ts
+
+   Pico's own light block has the weight of :root:not([data-theme=dark]),
+   so ours use :root[data-theme] to match it and win by coming later. */
+
+:root[data-theme] {
+  color-scheme: light;
+  --adw-accent-bg: var(--accent-bg, #3584e4);
+  --adw-accent: var(--accent-text, #1c71d8);
   --adw-destructive-bg: #e01b24;
   --adw-destructive: #c30000;
   --adw-success: #1b8553;
@@ -20,7 +31,9 @@
   --adw-shade: rgba(0, 0, 6, 0.08);
   --adw-shade-hover: rgba(0, 0, 6, 0.12);
   --adw-shade-active: rgba(0, 0, 6, 0.18);
-  --adw-focus: rgba(53, 132, 228, 0.5);
+  --adw-focus: color-mix(in srgb, var(--adw-accent-bg) 50%, transparent);
+  --adw-control-bg: var(--adw-shade);
+  --adw-popover-bg: var(--adw-view-bg);
   --adw-radius: 8px;
   --adw-radius-lg: 12px;
 
@@ -45,7 +58,7 @@
   --pico-h4-color: var(--adw-fg);
   --pico-muted-color: var(--adw-dim-fg);
   --pico-muted-border-color: var(--adw-border);
-  --pico-text-selection-color: rgba(53, 132, 228, 0.3);
+  --pico-text-selection-color: color-mix(in srgb, var(--adw-accent-bg) 30%, transparent);
 
   --pico-primary: var(--adw-accent);
   --pico-primary-background: var(--adw-accent-bg);
@@ -82,26 +95,162 @@
   --pico-code-color: var(--adw-fg);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) {
-    --adw-accent: #78aeed;
-    --adw-destructive: #ff7b63;
-    --adw-success: #8ff0a4;
-    --adw-warning: #f8e45c;
-    --adw-window-bg: #242424;
-    --adw-view-bg: #1e1e1e;
-    --adw-sidebar-bg: #303030;
-    --adw-headerbar-bg: #303030;
-    --adw-card-bg: #303030;
-    --adw-tool-bg: rgba(255, 255, 255, 0.08);
-    --adw-fg: #ffffff;
-    --adw-dim-fg: rgba(255, 255, 255, 0.55);
-    --adw-border: rgba(255, 255, 255, 0.15);
-    --adw-shade: rgba(255, 255, 255, 0.1);
-    --adw-shade-hover: rgba(255, 255, 255, 0.15);
-    --adw-shade-active: rgba(255, 255, 255, 0.3);
-    --pico-range-thumb-border-color: rgba(255, 255, 255, 0.3);
-  }
+/* GNOME dark */
+:root[data-scheme="dark"] {
+  color-scheme: dark;
+  --adw-accent: var(--accent-text-dark, #78aeed);
+  --adw-destructive: #ff7b63;
+  --adw-success: #8ff0a4;
+  --adw-warning: #f8e45c;
+  --adw-window-bg: #242424;
+  --adw-view-bg: #1e1e1e;
+  --adw-sidebar-bg: #303030;
+  --adw-headerbar-bg: #303030;
+  --adw-card-bg: #303030;
+  --adw-tool-bg: rgba(255, 255, 255, 0.08);
+  --adw-fg: #ffffff;
+  --adw-dim-fg: rgba(255, 255, 255, 0.55);
+  --adw-border: rgba(255, 255, 255, 0.15);
+  --adw-shade: rgba(255, 255, 255, 0.1);
+  --adw-shade-hover: rgba(255, 255, 255, 0.15);
+  --adw-shade-active: rgba(255, 255, 255, 0.3);
+  --pico-range-thumb-border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* GNOME dim: dark, with softer greys and less contrast */
+:root[data-scheme="dim"] {
+  color-scheme: dark;
+  --adw-accent: var(--accent-text-dark, #78aeed);
+  --adw-destructive: #ff7b63;
+  --adw-success: #8ff0a4;
+  --adw-warning: #f8e45c;
+  --adw-window-bg: #36373d;
+  --adw-view-bg: #303137;
+  --adw-sidebar-bg: #3d3e45;
+  --adw-headerbar-bg: #3d3e45;
+  --adw-card-bg: #3d3e45;
+  --adw-tool-bg: rgba(255, 255, 255, 0.08);
+  --adw-fg: #ececf1;
+  --adw-dim-fg: #b3b4bd;
+  --adw-border: rgba(255, 255, 255, 0.13);
+  --adw-shade: rgba(255, 255, 255, 0.08);
+  --adw-shade-hover: rgba(255, 255, 255, 0.13);
+  --adw-shade-active: rgba(255, 255, 255, 0.24);
+  --pico-range-thumb-border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* macOS light. Colours follow the system palette in Apple's guidelines,
+   with the greys darkened a little so small text passes 4.5:1. */
+:root[data-style="mac"] {
+  --adw-accent-bg: var(--accent-bg, #0a64d6);
+  --adw-accent: var(--accent-text, #0a64d6);
+  --adw-destructive-bg: #d70015;
+  --adw-destructive: #c4000f;
+  --adw-success: #248a3d;
+  --adw-warning: #935f00;
+  --adw-window-bg: #ffffff;
+  --adw-view-bg: #ffffff;
+  --adw-sidebar-bg: #ecebef;
+  --adw-headerbar-bg: #ffffff;
+  --adw-card-bg: #f5f5f7;
+  --adw-tool-bg: rgba(255, 255, 255, 0.75);
+  --adw-fg: #1d1d1f;
+  --adw-dim-fg: #636366;
+  --adw-border: rgba(0, 0, 0, 0.1);
+  --adw-shade: rgba(0, 0, 0, 0.05);
+  --adw-shade-hover: rgba(0, 0, 0, 0.08);
+  --adw-shade-active: rgba(0, 0, 0, 0.14);
+  --adw-control-bg: #ffffff;
+  --adw-control-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.16), 0 1px 1px rgba(0, 0, 0, 0.1);
+  --adw-radius: 6px;
+  --adw-radius-lg: 10px;
+  --pico-range-thumb-border-color: rgba(0, 0, 6, 0.3);
+
+  --pico-font-family-sans-serif: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  --pico-font-size: 81.25%;
+  --pico-form-element-spacing-vertical: 0.25rem;
+  --pico-form-element-spacing-horizontal: 0.55rem;
+}
+
+/* macOS dark */
+:root[data-style="mac"][data-scheme="dark"] {
+  --adw-accent: var(--accent-text-dark, #4da3ff);
+  --adw-destructive: #ff6961;
+  --adw-success: #30d158;
+  --adw-warning: #ffd60a;
+  --adw-window-bg: #1e1e1e;
+  --adw-view-bg: #1e1e1e;
+  --adw-sidebar-bg: #2b2b2d;
+  --adw-headerbar-bg: #262628;
+  --adw-card-bg: #2c2c2e;
+  --adw-tool-bg: rgba(255, 255, 255, 0.08);
+  --adw-fg: #f5f5f7;
+  --adw-dim-fg: #a1a1a6;
+  --adw-border: rgba(255, 255, 255, 0.12);
+  --adw-shade: rgba(255, 255, 255, 0.07);
+  --adw-shade-hover: rgba(255, 255, 255, 0.11);
+  --adw-shade-active: rgba(255, 255, 255, 0.18);
+  --adw-control-bg: #3a3a3c;
+  --adw-control-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.5), inset 0 0.5px rgba(255, 255, 255, 0.12);
+  --adw-popover-bg: #323234;
+  --pico-range-thumb-border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* macOS dim: graphite greys, between light and dark */
+:root[data-style="mac"][data-scheme="dim"] {
+  --adw-accent: var(--accent-text-dark, #4da3ff);
+  --adw-destructive: #ff6961;
+  --adw-success: #30d158;
+  --adw-warning: #ffd60a;
+  --adw-window-bg: #2f3033;
+  --adw-view-bg: #2f3033;
+  --adw-sidebar-bg: #3a3b3f;
+  --adw-headerbar-bg: #34353a;
+  --adw-card-bg: #3b3c40;
+  --adw-tool-bg: rgba(255, 255, 255, 0.08);
+  --adw-fg: #ebebf0;
+  --adw-dim-fg: #b0b0b8;
+  --adw-border: rgba(255, 255, 255, 0.12);
+  --adw-shade: rgba(255, 255, 255, 0.07);
+  --adw-shade-hover: rgba(255, 255, 255, 0.11);
+  --adw-shade-active: rgba(255, 255, 255, 0.18);
+  --adw-control-bg: #4a4b50;
+  --adw-control-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.4), inset 0 0.5px rgba(255, 255, 255, 0.12);
+  --adw-popover-bg: #3d3e43;
+  --pico-range-thumb-border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Accent colours. Blue sets nothing, so each style keeps its own blue.
+   Every fill passes 4.5:1 under white text. */
+:root[data-accent="purple"] {
+  --accent-bg: #7d3cc8;
+  --accent-text: #7d3cc8;
+  --accent-text-dark: #c28cf5;
+}
+:root[data-accent="pink"] {
+  --accent-bg: #c2366e;
+  --accent-text: #c2366e;
+  --accent-text-dark: #ff8ab8;
+}
+:root[data-accent="red"] {
+  --accent-bg: #d12f2f;
+  --accent-text: #c42727;
+  --accent-text-dark: #ff7b73;
+}
+:root[data-accent="orange"] {
+  --accent-bg: #b85a00;
+  --accent-text: #a95300;
+  --accent-text-dark: #ffa94d;
+}
+:root[data-accent="green"] {
+  --accent-bg: #1f8a3b;
+  --accent-text: #1a7a33;
+  --accent-text-dark: #6fdc8c;
+}
+:root[data-accent="graphite"] {
+  --accent-bg: #6e6e73;
+  --accent-text: #5a5a5f;
+  --accent-text-dark: #b8b8bd;
 }
 
 body {
@@ -229,4 +378,106 @@ code {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Popovers, the segmented control and the output bar */
+.popover {
+  background: var(--adw-popover-bg);
+  border: 1px solid var(--adw-border);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.2);
+}
+.segmented {
+  background: var(--adw-shade);
+}
+.segmented label:has(input:checked) {
+  background: var(--adw-popover-bg);
+  box-shadow: 0 0 0 0.5px var(--adw-border), 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+.segmented label:has(input:focus-visible),
+.swatches label:has(input:focus-visible) {
+  outline: 2px solid var(--adw-focus);
+  outline-offset: 1px;
+}
+.swatches label {
+  background: var(--swatch);
+}
+.swatches label:has(input:checked) {
+  box-shadow: 0 0 0 2px var(--adw-popover-bg), 0 0 0 4px var(--swatch);
+}
+.outputbar {
+  background: var(--adw-headerbar-bg);
+  border-top: 1px solid var(--adw-border);
+}
+
+/* The macOS style. Same layout, drawn like AppKit controls. */
+
+/* Push buttons are white with a hairline edge. Flat and row buttons stay flat. */
+[data-style="mac"] :is(button, [type="button"], [role="button"]):not(.flat, .row, .dropstrip, .suggested, .destructive) {
+  --pico-background-color: var(--adw-control-bg);
+  min-height: 1.9rem;
+  padding: 0.2rem 0.8rem;
+  font-weight: 400;
+  box-shadow: var(--adw-control-shadow);
+}
+[data-style="mac"] :is(button, [type="button"], [role="button"]):not(.flat, .row, .dropstrip, .suggested, .destructive):active {
+  background-image: linear-gradient(var(--adw-shade-hover), var(--adw-shade-hover));
+}
+[data-style="mac"] :is(button.suggested, button.destructive) {
+  min-height: 1.9rem;
+  padding: 0.2rem 0.8rem;
+  font-weight: 500;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
+}
+[data-style="mac"] :is(button, [role="button"]).circular {
+  border-radius: var(--adw-radius);
+}
+[data-style="mac"] :is(.headerbar, .outputbar) .circular {
+  width: 1.9rem;
+  min-height: 1.9rem;
+}
+
+/* Sidebar: plain section names, accent icons, and a filled row for the picked tool */
+[data-style="mac"] .section-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+[data-style="mac"] button.row {
+  min-height: 2.15rem;
+  padding: 0.25rem 0.6rem;
+}
+[data-style="mac"] button.row .icon {
+  color: var(--adw-accent);
+}
+[data-style="mac"] button.row.active,
+[data-style="mac"] button.row.active:is(:hover, :focus) {
+  --pico-background-color: var(--adw-accent-bg);
+  --pico-color: #ffffff;
+}
+[data-style="mac"] button.row.active .icon {
+  color: #ffffff;
+}
+
+/* The title sits on the left of the toolbar, not in the middle */
+[data-style="mac"] .content > .headerbar .headerbar-start {
+  display: none;
+}
+[data-style="mac"] .content > .headerbar .headerbar-title {
+  align-items: flex-start;
+  padding-left: 0.5rem;
+  text-align: left;
+}
+[data-style="mac"] .content > .headerbar .title {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+[data-style="mac"] .row-item[aria-selected="true"],
+[data-style="mac"] .row-item[aria-selected="true"]:hover {
+  background: color-mix(in srgb, var(--adw-accent-bg) 14%, transparent);
+  box-shadow: none;
+}
+[data-style="mac"] .outputbar {
+  background: var(--adw-card-bg);
 }

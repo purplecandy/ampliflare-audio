@@ -28,7 +28,8 @@ const ICON: Record<QueuedFile["status"], IconName> = {
 function statusText(f: QueuedFile): string {
   if (f.status === "running" && f.step) return `${f.step}…`;
   if (f.status === "error" && f.error) return `Failed: ${f.error}`;
-  if (f.status === "done" && f.outputs && f.outputs.length > 1) return `Done, ${f.outputs.length} files`;
+  if (f.status === "done" && f.outputs && f.outputs.length > 1) return `Saved ${f.outputs.length} files`;
+  if (f.status === "done" && f.outputs?.[0]) return `Saved as ${f.outputs[0].split(/[\\/]/).pop()}`;
   return LABEL[f.status];
 }
 
