@@ -22,6 +22,9 @@ export interface QueuedFile {
   error?: string;
 }
 
+/** Where results go. "source" puts each one next to its original. */
+export type SaveTo = { kind: "source" } | { kind: "folder"; path: string };
+
 export interface Tools {
   deep_filter: boolean;
   ffmpeg: string | null;

@@ -86,15 +86,61 @@ fn stem_and_ext(input: &Path) -> Result<(String, String), String> {
     Ok((stem, ext))
 }
 
-/// Pick a spot for the output so we never overwrite the input.
-fn output_path(out_dir: &Path, stem: &str, suffix: &str, ext: &str) -> PathBuf {
-    let mut p = out_dir.join(format!("{stem}{suffix}.{ext}"));
-    let mut n = 2;
-    while p.exists() {
-        p = out_dir.join(format!("{stem}{suffix}-{n}.{ext}"));
-        n += 1;
+/// How new files are named when the user has not picked a pattern.
+/// It gives names like talk-clean.wav, talk-enhanced.wav and talk-part1.wav.
+const DEFAULT_PATTERN: &str = "{name}-{tool}";
+
+/// Fill in a name pattern. {name} is the input's name without its extension,
+/// {tool} is what we did to it and {n} is a number. The window fills in {date}
+/// before it sends the pattern, since it knows the local date.
+fn render_name(pattern: &str, stem: &str, tool: &str, n: Option<usize>) -> String {
+    let mut pattern = pattern.to_string();
+    // An empty token takes the dash next to it along, so "{name}-{tool}" gives "talk", not "talk-".
+    for (token, empty) in [("{tool}", tool.is_empty()), ("{n}", n.is_none())] {
+        if !empty {
+            continue;
+        }
+        for sep in ["-", "_", " ", "."] {
+            pattern = pattern.replace(&format!("{sep}{token}"), "").replace(&format!("{token}{sep}"), "");
+        }
     }
-    p
+    let n = n.map(|n| n.to_string()).unwrap_or_default();
+    let name = pattern.replace("{name}", stem).replace("{tool}", tool).replace("{n}", &n);
+    // A file name can't hold folder breaks.
+    let name: String = name
+        .chars()
+        .map(|c| if matches!(c, '/' | '\\' | ':') || c.is_control() { '-' } else { c })
+        .collect();
+    if name.trim().is_empty() {
+        stem.to_string()
+    } else {
+        name
+    }
+}
+
+/// Split writes many files, so each needs a number. Add one if the pattern has no way to tell them apart.
+fn split_pattern(pattern: &str) -> String {
+    if pattern.contains("{n}") || pattern.contains("{tool}") {
+        pattern.to_string()
+    } else {
+        format!("{pattern}-{{n}}")
+    }
+}
+
+/// Pick a spot for the output so we never overwrite the input or an older result.
+fn output_path(out_dir: &Path, pattern: &str, stem: &str, tool: &str, part: Option<usize>, ext: &str) -> PathBuf {
+    let pattern = if pattern.trim().is_empty() { DEFAULT_PATTERN } else { pattern };
+    let at = |name: String| out_dir.join(format!("{name}.{ext}"));
+    if part.is_none() && pattern.contains("{n}") {
+        // The number is part of the name, so count up until the name is free.
+        return (1..).map(|n| at(render_name(pattern, stem, tool, Some(n)))).find(|p| !p.exists()).unwrap();
+    }
+    let base = render_name(pattern, stem, tool, part);
+    let first = at(base.clone());
+    if !first.exists() {
+        return first;
+    }
+    (2..).map(|n| at(format!("{base}-{n}"))).find(|p| !p.exists()).unwrap()
 }
 
 /// Encoder settings ffmpeg needs for lossy formats. Lossless formats need none.
@@ -131,10 +177,12 @@ pub async fn run_job(
     id: String,
     input: String,
     output_dir: String,
+    name_pattern: Option<String>,
     action: Action,
 ) -> Result<Vec<String>, String> {
     let input = PathBuf::from(input);
     let out_dir = PathBuf::from(output_dir);
+    let pattern = name_pattern.unwrap_or_default();
     if !input.is_file() {
         return Err("Input file does not exist".into());
     }
@@ -143,13 +191,13 @@ pub async fn run_job(
 
     match action {
         Action::Denoise { strength } => {
-            let out = denoise(&app, &id, &input, &out_dir, &stem, &ext, strength).await?;
+            let out = denoise(&app, &id, &input, &out_dir, &pattern, &stem, &ext, strength).await?;
             Ok(vec![out])
         }
         Action::Convert { format, bitrate } => {
             report(&app, &id, "Converting");
             let fmt = format.to_lowercase();
-            let out = output_path(&out_dir, &stem, "", &fmt);
+            let out = output_path(&out_dir, &pattern, &stem, "", None, &fmt);
             let cmd = ffmpeg(&app)?
                 .args(["-i", &input.to_string_lossy()])
                 .args(encode_args(&fmt, bitrate.as_deref()))
@@ -159,7 +207,7 @@ pub async fn run_job(
         }
         Action::Cut { start, end } => {
             report(&app, &id, "Cutting");
-            let out = output_path(&out_dir, &stem, "-cut", &ext);
+            let out = output_path(&out_dir, &pattern, &stem, "cut", None, &ext);
             let mut cmd = ffmpeg(&app)?.args(["-i", &input.to_string_lossy(), "-ss", &start.to_string()]);
             if let Some(end) = end {
                 cmd = cmd.args(["-to", &end.to_string()]);
@@ -168,10 +216,10 @@ pub async fn run_job(
             run(cmd, "ffmpeg").await?;
             Ok(vec![out.to_string_lossy().to_string()])
         }
-        Action::Split { points } => split(&app, &id, &input, &out_dir, &stem, &ext, points).await,
+        Action::Split { points } => split(&app, &id, &input, &out_dir, &pattern, &stem, &ext, points).await,
         Action::Enhance { target_lufs } => {
             report(&app, &id, "Enhancing");
-            let out = output_path(&out_dir, &stem, "-enhanced", &ext);
+            let out = output_path(&out_dir, &pattern, &stem, "enhanced", None, &ext);
             // highpass drops rumble under 80 Hz. loudnorm brings speech to a standard level.
             let filter = format!("highpass=f=80,loudnorm=I={target_lufs}:TP=-1.5:LRA=11");
             let cmd = ffmpeg(&app)?
@@ -190,10 +238,12 @@ async fn split(
     id: &str,
     input: &Path,
     out_dir: &Path,
+    pattern: &str,
     stem: &str,
     ext: &str,
     points: Vec<f64>,
 ) -> Result<Vec<String>, String> {
+    let pattern = split_pattern(if pattern.trim().is_empty() { DEFAULT_PATTERN } else { pattern });
     let mut points: Vec<f64> = points.into_iter().filter(|p| *p > 0.0).collect();
     points.sort_by(|a, b| a.partial_cmp(b).unwrap());
     points.dedup();
@@ -206,7 +256,7 @@ async fn split(
     let pieces = points.len() + 1;
     for (i, end) in points.iter().map(Some).chain(std::iter::once(None)).enumerate() {
         report(app, id, &format!("Writing part {} of {pieces}", i + 1));
-        let out = output_path(out_dir, stem, &format!("-part{}", i + 1), ext);
+        let out = output_path(out_dir, &pattern, stem, &format!("part{}", i + 1), Some(i + 1), ext);
         let mut cmd = ffmpeg(app)?.args(["-i", &input.to_string_lossy(), "-ss", &start.to_string()]);
         if let Some(end) = end {
             cmd = cmd.args(["-to", &end.to_string()]);
@@ -228,6 +278,7 @@ async fn denoise(
     id: &str,
     input: &Path,
     out_dir: &Path,
+    pattern: &str,
     stem: &str,
     ext: &str,
     strength: u8,
@@ -260,7 +311,7 @@ async fn denoise(
     }
 
     report(app, id, "Saving");
-    let out = output_path(out_dir, stem, "-clean", ext);
+    let out = output_path(out_dir, pattern, stem, "clean", None, ext);
     if ext == "wav" {
         tokio::fs::copy(&wav_clean, &out).await.map_err(|e| format!("Cannot save output: {e}"))?;
     } else {
@@ -293,4 +344,48 @@ pub fn dev_start() -> DevStart {
         .map(|v| v.split(':').filter(|s| !s.is_empty()).map(String::from).collect())
         .unwrap_or_default();
     DevStart { files, action: std::env::var("AMPLIFLARE_DEV_ACTION").ok() }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fills_in_a_pattern() {
+        assert_eq!(render_name(DEFAULT_PATTERN, "talk", "clean", None), "talk-clean");
+        assert_eq!(render_name("{tool} {name} {n}", "talk", "cut", Some(3)), "cut talk 3");
+        assert_eq!(render_name("{name}/{tool}", "talk", "clean", None), "talk-clean");
+    }
+
+    #[test]
+    fn drops_the_dash_next_to_an_empty_token() {
+        assert_eq!(render_name(DEFAULT_PATTERN, "talk", "", None), "talk");
+        assert_eq!(render_name("{tool}_{name}", "talk", "", None), "talk");
+        assert_eq!(render_name("{name}-{n}", "talk", "clean", None), "talk");
+        assert_eq!(render_name("{tool}", "talk", "", None), "talk");
+    }
+
+    #[test]
+    fn split_always_numbers_its_parts() {
+        assert_eq!(split_pattern("{name}"), "{name}-{n}");
+        assert_eq!(split_pattern(DEFAULT_PATTERN), DEFAULT_PATTERN);
+        assert_eq!(split_pattern("{name} {n}"), "{name} {n}");
+    }
+
+    #[test]
+    fn never_reuses_a_taken_name() {
+        let dir = std::env::temp_dir().join("ampliflare-test-names");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let first = output_path(&dir, "", "talk", "clean", None, "wav");
+        assert_eq!(first, dir.join("talk-clean.wav"));
+        std::fs::write(&first, b"").unwrap();
+        assert_eq!(output_path(&dir, "", "talk", "clean", None, "wav"), dir.join("talk-clean-2.wav"));
+
+        std::fs::write(dir.join("talk-1.wav"), b"").unwrap();
+        assert_eq!(output_path(&dir, "{name}-{n}", "talk", "clean", None, "wav"), dir.join("talk-2.wav"));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

@@ -9,8 +9,10 @@ import { DropZone } from "./components/DropZone";
 import { Editor } from "./components/Editor";
 import { FileList } from "./components/FileList";
 import { Icon } from "./components/Icon";
+import { OutputBar } from "./components/OutputBar";
 import { Sidebar } from "./components/Sidebar";
 import { UpdateChecker } from "./components/UpdateChecker";
+import { DEFAULT_PATTERN, fillDate, load, save } from "./settings";
 import {
   EDITOR_KINDS,
   type Action,
@@ -18,6 +20,7 @@ import {
   type Analysis,
   type Progress,
   type QueuedFile,
+  type SaveTo,
   type Tools,
 } from "./types";
 import "./App.css";
@@ -50,6 +53,15 @@ function parentDir(p: string): string {
   return i > 0 ? p.slice(0, i) : p;
 }
 
+function isSaveTo(v: unknown): boolean {
+  const s = v as SaveTo;
+  return s?.kind === "source" || (s?.kind === "folder" && typeof s.path === "string" && s.path !== "");
+}
+
+function isStringList(v: unknown): boolean {
+  return Array.isArray(v) && v.every((x) => typeof x === "string");
+}
+
 export default function App() {
   const [files, setFiles] = useState<QueuedFile[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -57,7 +69,11 @@ export default function App() {
     kind: "denoise",
     strength: 100,
   });
-  const [outputDir, setOutputDir] = useState("");
+  const [saveTo, setSaveTo] = useState<SaveTo>(() => load("saveTo", { kind: "source" }, isSaveTo));
+  const [recentDirs, setRecentDirs] = useState<string[]>(() => load("recentDirs", [], isStringList));
+  const [namePattern, setNamePattern] = useState(() =>
+    load("namePattern", DEFAULT_PATTERN, (v) => typeof v === "string"),
+  );
   const [tools, setTools] = useState<Tools | null>(null);
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -66,6 +82,10 @@ export default function App() {
 
   const isEditor = EDITOR_KINDS.includes(action.kind);
   const selected = files.find((f) => f.id === selectedId) ?? null;
+
+  useEffect(() => save("saveTo", saveTo), [saveTo]);
+  useEffect(() => save("recentDirs", recentDirs), [recentDirs]);
+  useEffect(() => save("namePattern", namePattern), [namePattern]);
 
   useEffect(() => {
     invoke<Tools>("check_tools")
@@ -91,7 +111,6 @@ export default function App() {
         }));
       return [...prev, ...fresh];
     });
-    setOutputDir((d) => d || parentDir(good[0]));
   }, []);
 
   // Dev builds can start with files already loaded. See dev_start in jobs.rs.
@@ -182,9 +201,16 @@ export default function App() {
   async function pickOutputDir() {
     const dir = await open({
       directory: true,
-      defaultPath: outputDir || undefined,
+      defaultPath: saveTo.kind === "folder" ? saveTo.path : undefined,
     });
-    if (typeof dir === "string") setOutputDir(dir);
+    if (typeof dir !== "string") return;
+    setSaveTo({ kind: "folder", path: dir });
+    setRecentDirs((prev) => [dir, ...prev.filter((d) => d !== dir)].slice(0, 5));
+  }
+
+  function revealOutput() {
+    if (saveTo.kind === "folder") void revealItemInDir(saveTo.path);
+    else if (selected ?? files[0]) void revealItemInDir((selected ?? files[0]).path);
   }
 
   function removeFile(id: string) {
@@ -192,7 +218,7 @@ export default function App() {
   }
 
   async function runAll() {
-    if (!outputDir || busy) return;
+    if (busy) return;
     const todo = isEditor
       ? files.filter((f) => f.id === selectedId)
       : files.filter((f) => f.status !== "done");
@@ -212,7 +238,8 @@ export default function App() {
         const outputs = await invoke<string[]>("run_job", {
           id: f.id,
           input: f.path,
-          outputDir,
+          outputDir: saveTo.kind === "folder" ? saveTo.path : parentDir(f.path),
+          namePattern: fillDate(namePattern),
           action,
         });
         setFiles((prev) =>
@@ -247,7 +274,6 @@ export default function App() {
   const splitEmpty = action.kind === "split" && action.points.length === 0;
   const canRun =
     pending > 0 &&
-    !!outputDir &&
     !busy &&
     !needsDeepFilter &&
     !needsFfmpeg &&
@@ -273,13 +299,7 @@ export default function App() {
       <Sidebar
         kind={action.kind}
         busy={busy}
-        fileCount={files.length}
-        outputDir={outputDir}
         onKind={(k) => k !== action.kind && setAction(defaultAction(k))}
-        onPickFiles={pickFiles}
-        onPickOutputDir={pickOutputDir}
-        onOpenOutputDir={() => revealItemInDir(outputDir)}
-        onClear={() => setFiles([])}
       />
 
       <section className="content">
@@ -290,6 +310,26 @@ export default function App() {
             <span className="subtitle">{subtitle}</span>
           </div>
           <div className="headerbar-end">
+            <button
+              type="button"
+              className="flat circular"
+              aria-label="Add files"
+              title="Add files"
+              disabled={busy}
+              onClick={pickFiles}
+            >
+              <Icon name="plus" />
+            </button>
+            <button
+              type="button"
+              className="flat circular"
+              aria-label="Clear list"
+              title="Clear list"
+              disabled={busy || files.length === 0}
+              onClick={() => setFiles([])}
+            >
+              <Icon name="trash" />
+            </button>
             {busy ? (
               <button
                 type="button"
@@ -377,6 +417,21 @@ export default function App() {
             )}
           </div>
         </div>
+
+        <OutputBar
+          saveTo={saveTo}
+          recentDirs={recentDirs}
+          pattern={namePattern}
+          action={action}
+          sample={selected ?? files[0] ?? null}
+          doneCount={doneCount}
+          fileCount={files.length}
+          busy={busy}
+          onSaveTo={setSaveTo}
+          onPickFolder={pickOutputDir}
+          onReveal={revealOutput}
+          onPattern={setNamePattern}
+        />
       </section>
     </div>
   );

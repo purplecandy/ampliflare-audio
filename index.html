@@ -6,6 +6,23 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ampliflare Audio</title>
+    <script>
+      // Set the look before the page draws so it does not flash.
+      // useAppearance in src/settings.ts does the same after this. Keep them in step.
+      (function () {
+        var a = {};
+        try {
+          a = JSON.parse(localStorage.getItem("ampliflare.appearance") || "{}") || {};
+        } catch (e) {}
+        var scheme = a.scheme && a.scheme !== "system" ? a.scheme
+          : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        var root = document.documentElement.dataset;
+        root.style = a.style || (navigator.userAgent.indexOf("Mac") >= 0 ? "mac" : "gnome");
+        root.accent = a.accent || "blue";
+        root.scheme = scheme;
+        root.theme = scheme === "light" ? "light" : "dark";
+      })();
+    </script>
   </head>
 
   <body>

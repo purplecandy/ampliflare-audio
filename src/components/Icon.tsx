@@ -16,7 +16,10 @@ export type IconName =
   | "open"
   | "check"
   | "warning"
-  | "spinner";
+  | "spinner"
+  | "palette"
+  | "reveal"
+  | "braces";
 
 /* Small symbolic icons in the GNOME style. All on a 16px grid. */
 const SHAPES: Record<IconName, ReactElement> = {
@@ -63,6 +66,21 @@ const SHAPES: Record<IconName, ReactElement> = {
       <path d="M13.5 8a5.5 5.5 0 0 0-5.5-5.5" />
     </>
   ),
+  palette: (
+    <>
+      <path d="M8 2a6 6 0 1 0 0 12c1 0 1.4-.7 1.1-1.5-.4-1 .3-2 1.4-2H12a2 2 0 0 0 2-2A6 6 0 0 0 8 2z" />
+      <circle cx="5" cy="7.5" r="0.6" fill="currentColor" />
+      <circle cx="7.5" cy="4.8" r="0.6" fill="currentColor" />
+      <circle cx="10.6" cy="5.8" r="0.6" fill="currentColor" />
+    </>
+  ),
+  reveal: (
+    <>
+      <circle cx="8" cy="8" r="6" />
+      <path d="M6.8 5.3 9.5 8l-2.7 2.7" />
+    </>
+  ),
+  braces: <path d="M6 2.5c-1.4 0-2 .6-2 1.9v1.4c0 1-.5 1.7-1.5 2.2 1 .5 1.5 1.2 1.5 2.2v1.4c0 1.3.6 1.9 2 1.9M10 2.5c1.4 0 2 .6 2 1.9v1.4c0 1 .5 1.7 1.5 2.2-1 .5-1.5 1.2-1.5 2.2v1.4c0 1.3-.6 1.9-2 1.9" />,
 };
 
 interface Props extends SVGProps<SVGSVGElement> {
