@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { ActionKind } from "./types";
 
 /* Choices that stay between launches. They live in the webview's localStorage,
@@ -77,6 +78,17 @@ function isAppearance(v: unknown): boolean {
   );
 }
 
+/** For AMPLIFLARE_DEV_LOOK: save a look like "mac/dark/blue". True if it changed. */
+export function saveDevLook(look: string): boolean {
+  const [style, scheme, accent = "blue"] = look.split("/");
+  const next = { style, scheme, accent };
+  if (!isAppearance(next)) return false;
+  const now = load("appearance", DEFAULT_APPEARANCE, isAppearance);
+  if (now.style === style && now.scheme === scheme && now.accent === accent) return false;
+  save("appearance", next);
+  return true;
+}
+
 const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
 
 function applyAppearance(a: Appearance) {
@@ -87,6 +99,11 @@ function applyAppearance(a: Appearance) {
   root.scheme = scheme;
   // Pico only knows light and dark. Dim is a dark theme with softer greys.
   root.theme = scheme === "light" ? "light" : "dark";
+  // The title bar belongs to the system, so tell it too. null follows the system.
+  if ("__TAURI_INTERNALS__" in window) {
+    const theme = a.scheme === "system" ? null : scheme === "light" ? "light" : "dark";
+    void getCurrentWindow().setTheme(theme).catch(console.warn);
+  }
 }
 
 export function useAppearance(): [Appearance, (a: Appearance) => void] {

@@ -12,12 +12,14 @@ import { Icon } from "./components/Icon";
 import { OutputBar } from "./components/OutputBar";
 import { Sidebar } from "./components/Sidebar";
 import { UpdateChecker } from "./components/UpdateChecker";
-import { DEFAULT_PATTERN, fillDate, load, save } from "./settings";
+import { limitReached, openBuyPage, resetDay } from "./license";
+import { DEFAULT_PATTERN, fillDate, load, save, saveDevLook } from "./settings";
 import {
   EDITOR_KINDS,
   type Action,
   type ActionKind,
   type Analysis,
+  type LicenseStatus,
   type Progress,
   type QueuedFile,
   type SaveTo,
@@ -78,6 +80,7 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [analyses, setAnalyses] = useState<Record<string, AnalysisState>>({});
+  const [license, setLicense] = useState<LicenseStatus | null>(null);
   const cancelRef = useRef(false);
 
   const isEditor = EDITOR_KINDS.includes(action.kind);
@@ -86,6 +89,13 @@ export default function App() {
   useEffect(() => save("saveTo", saveTo), [saveTo]);
   useEffect(() => save("recentDirs", recentDirs), [recentDirs]);
   useEffect(() => save("namePattern", namePattern), [namePattern]);
+
+  // Show the saved license at once, then ask Dodo whether it still holds.
+  useEffect(() => {
+    if (!IS_TAURI) return;
+    invoke<LicenseStatus>("license_status").then(setLicense).catch(console.warn);
+    invoke<LicenseStatus>("refresh_license").then(setLicense).catch(console.warn);
+  }, []);
 
   useEffect(() => {
     invoke<Tools>("check_tools")
@@ -116,8 +126,10 @@ export default function App() {
   // Dev builds can start with files already loaded. See dev_start in jobs.rs.
   useEffect(() => {
     if (!import.meta.env.DEV) return;
-    invoke<{ files: string[]; action: string | null }>("dev_start")
+    invoke<{ files: string[]; action: string | null; look: string | null }>("dev_start")
       .then((d) => {
+        // The look is read once at start, so reload after changing it.
+        if (d.look && saveDevLook(d.look)) return location.reload();
         if (d.action) setAction(defaultAction(d.action as ActionKind));
         if (d.files.length > 0) void addPaths(d.files);
       })
@@ -259,6 +271,10 @@ export default function App() {
           ),
         );
       }
+      // Free use stops at the weekly limit. The files left stay waiting.
+      const status = await invoke<LicenseStatus>("license_status").catch(() => null);
+      if (status) setLicense(status);
+      if (limitReached(status)) break;
     }
     setBusy(false);
   }
@@ -272,13 +288,17 @@ export default function App() {
     action.kind === "denoise" && tools && !tools.deep_filter;
   const needsFfmpeg = tools && !tools.ffmpeg;
   const splitEmpty = action.kind === "split" && action.points.length === 0;
+  const atLimit = limitReached(license);
   const canRun =
     pending > 0 &&
     !busy &&
     !needsDeepFilter &&
     !needsFfmpeg &&
-    !splitEmpty;
-  const runLabel = isEditor
+    !splitEmpty &&
+    !atLimit;
+  const runLabel = atLimit
+    ? "Weekly limit reached"
+    : isEditor
     ? selected
       ? `${action.kind === "cut" ? "Cut" : "Split"} ${selected.name}`
       : "Pick a file"
@@ -300,6 +320,8 @@ export default function App() {
         kind={action.kind}
         busy={busy}
         onKind={(k) => k !== action.kind && setAction(defaultAction(k))}
+        license={license}
+        onLicense={setLicense}
       />
 
       <section className="content">
@@ -361,6 +383,25 @@ export default function App() {
             <span>
               ffmpeg was not found. Install it with{" "}
               <code>brew install ffmpeg</code> and reopen the app.
+            </span>
+          </div>
+        )}
+        {atLimit && license && (
+          <div className="banner">
+            <Icon name="warning" />
+            <span>
+              You have used this week's {license.limit} free files.
+              {resetDay(license) && ` The count resets on ${resetDay(license)}.`}{" "}
+              <a
+                href="#buy"
+                onClick={(e) => {
+                  e.preventDefault();
+                  openBuyPage();
+                }}
+              >
+                Buy a license
+              </a>{" "}
+              to remove the limit and use it for work.
             </span>
           </div>
         )}

@@ -54,8 +54,9 @@ pub(crate) fn find_ffmpeg() -> Option<String> {
         }
     }
     let path = std::env::var_os("PATH")?;
+    let name = if cfg!(windows) { "ffmpeg.exe" } else { "ffmpeg" };
     for dir in std::env::split_paths(&path) {
-        let p = dir.join("ffmpeg");
+        let p = dir.join(name);
         if p.is_file() {
             return Some(p.to_string_lossy().to_string());
         }
@@ -171,8 +172,23 @@ pub fn is_audio_file(path: String) -> bool {
 }
 
 /// Run one action on one file. Returns the paths of the new files.
+/// Free use counts each finished file toward its weekly limit. See license.rs.
 #[tauri::command]
 pub async fn run_job(
+    app: AppHandle,
+    id: String,
+    input: String,
+    output_dir: String,
+    name_pattern: Option<String>,
+    action: Action,
+) -> Result<Vec<String>, String> {
+    crate::license::check_quota(&app)?;
+    let outputs = run_action(app.clone(), id, input, output_dir, name_pattern, action).await?;
+    crate::license::count_file(&app);
+    Ok(outputs)
+}
+
+async fn run_action(
     app: AppHandle,
     id: String,
     input: String,
@@ -327,23 +343,29 @@ async fn denoise(
 }
 
 /// Files and tab to open at start. Only works in debug builds and only when
-/// AMPLIFLARE_DEV_FILES (paths joined by ":") or AMPLIFLARE_DEV_ACTION is set.
+/// AMPLIFLARE_DEV_FILES (paths joined by ":"), AMPLIFLARE_DEV_ACTION or
+/// AMPLIFLARE_DEV_LOOK (style/colours/accent, like "mac/dark/blue") is set.
 /// Lets us start the app already loaded, which makes testing quick.
 #[derive(Debug, Clone, Serialize)]
 pub struct DevStart {
     pub files: Vec<String>,
     pub action: Option<String>,
+    pub look: Option<String>,
 }
 
 #[tauri::command]
 pub fn dev_start() -> DevStart {
     if !cfg!(debug_assertions) {
-        return DevStart { files: vec![], action: None };
+        return DevStart { files: vec![], action: None, look: None };
     }
     let files = std::env::var("AMPLIFLARE_DEV_FILES")
         .map(|v| v.split(':').filter(|s| !s.is_empty()).map(String::from).collect())
         .unwrap_or_default();
-    DevStart { files, action: std::env::var("AMPLIFLARE_DEV_ACTION").ok() }
+    DevStart {
+        files,
+        action: std::env::var("AMPLIFLARE_DEV_ACTION").ok(),
+        look: std::env::var("AMPLIFLARE_DEV_LOOK").ok(),
+    }
 }
 
 #[cfg(test)]

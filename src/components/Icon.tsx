@@ -19,7 +19,8 @@ export type IconName =
   | "spinner"
   | "palette"
   | "reveal"
-  | "braces";
+  | "braces"
+  | "key";
 
 /* Small symbolic icons in the GNOME style. All on a 16px grid. */
 const SHAPES: Record<IconName, ReactElement> = {
@@ -78,6 +79,12 @@ const SHAPES: Record<IconName, ReactElement> = {
     <>
       <circle cx="8" cy="8" r="6" />
       <path d="M6.8 5.3 9.5 8l-2.7 2.7" />
+    </>
+  ),
+  key: (
+    <>
+      <circle cx="5.5" cy="10.5" r="3" />
+      <path d="M7.7 8.3 13.5 2.5M11.2 4.8l1.8 1.8M12.8 3.2l1.4 1.4" />
     </>
   ),
   braces: <path d="M6 2.5c-1.4 0-2 .6-2 1.9v1.4c0 1-.5 1.7-1.5 2.2 1 .5 1.5 1.2 1.5 2.2v1.4c0 1.3.6 1.9 2 1.9M10 2.5c1.4 0 2 .6 2 1.9v1.4c0 1 .5 1.7 1.5 2.2-1 .5-1.5 1.2-1.5 2.2v1.4c0 1.3-.6 1.9-2 1.9" />,

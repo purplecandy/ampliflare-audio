@@ -1,5 +1,6 @@
 mod analyze;
 mod jobs;
+mod license;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -21,7 +22,11 @@ pub fn run() {
             jobs::is_audio_file,
             jobs::run_job,
             jobs::dev_start,
-            analyze::analyze_audio
+            analyze::analyze_audio,
+            license::license_status,
+            license::activate_license,
+            license::refresh_license,
+            license::deactivate_license
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

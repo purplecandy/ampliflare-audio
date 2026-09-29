@@ -25,6 +25,16 @@ export interface QueuedFile {
 /** Where results go. "source" puts each one next to its original. */
 export type SaveTo = { kind: "source" } | { kind: "folder"; path: string };
 
+/** Matches the Status struct in src-tauri/src/license.rs */
+export interface LicenseStatus {
+  licensed: boolean;
+  key_end: string | null;
+  used: number;
+  limit: number;
+  /** Seconds since 1970. */
+  resets_at: number | null;
+}
+
 export interface Tools {
   deep_filter: boolean;
   ffmpeg: string | null;
