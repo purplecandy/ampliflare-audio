@@ -1,0 +1,3 @@
+[submodule "site"]
+	path = site
+	url = git@github.com:purplecandy/ampliflare-audio-site.git
