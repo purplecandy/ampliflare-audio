@@ -3,16 +3,19 @@ import { getVersion } from "@tauri-apps/api/app";
 import { TOOLS } from "./ActionPanel";
 import { AppearanceMenu } from "./AppearanceMenu";
 import { Icon } from "./Icon";
+import { LicenseMenu } from "./LicenseMenu";
 import { checkForUpdates } from "./UpdateChecker";
-import type { ActionKind } from "../types";
+import type { ActionKind, LicenseStatus } from "../types";
 
 interface Props {
   kind: ActionKind;
   busy: boolean;
   onKind: (kind: ActionKind) => void;
+  license: LicenseStatus | null;
+  onLicense: (s: LicenseStatus) => void;
 }
 
-export function Sidebar({ kind, busy, onKind }: Props) {
+export function Sidebar({ kind, busy, onKind, license, onLicense }: Props) {
   const [version, setVersion] = useState("");
   const [updateStatus, setUpdateStatus] = useState("");
 
@@ -54,6 +57,7 @@ export function Sidebar({ kind, busy, onKind }: Props) {
         </ul>
       </nav>
       <footer className="sidebar-footer">
+        {license && <LicenseMenu status={license} onStatus={onLicense} />}
         <AppearanceMenu />
         <button type="button" className="row" onClick={checkUpdates} disabled={updateStatus === "Checking..." || !("__TAURI_INTERNALS__" in window) || import.meta.env.DEV}>
           <span className="row-text">

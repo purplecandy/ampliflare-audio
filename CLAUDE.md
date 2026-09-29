@@ -26,4 +26,5 @@ Heavy work runs in sidecar binaries: `deep-filter` for noise reduction and
 - `cd src-tauri && cargo test` for Rust. Tests need ffmpeg installed.
 - To see the UI with files loaded, run `pnpm tauri dev` with
   `AMPLIFLARE_DEV_FILES=/a.wav:/b.mp3` and `AMPLIFLARE_DEV_ACTION=cut`.
-  This only works in debug builds.
+  `AMPLIFLARE_DEV_LOOK=mac/dark/blue` sets the style, colours and accent.
+  These only work in debug builds.
