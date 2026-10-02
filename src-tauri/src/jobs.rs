@@ -46,7 +46,16 @@ fn report(app: &AppHandle, id: &str, step: &str) {
 }
 
 /// Find ffmpeg. Apps opened from Finder get a tiny PATH, so check the usual spots too.
+/// The ffmpeg bundled with the app, which Tauri puts next to its executable,
+/// then one installed on the system.
 pub(crate) fn find_ffmpeg() -> Option<String> {
+    let bundled = if cfg!(windows) { "ampliflare-ffmpeg.exe" } else { "ampliflare-ffmpeg" };
+    if let Some(dir) = std::env::current_exe().ok().and_then(|p| p.parent().map(Path::to_path_buf)) {
+        let p = dir.join(bundled);
+        if p.is_file() {
+            return Some(p.to_string_lossy().to_string());
+        }
+    }
     let candidates = ["/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/usr/bin/ffmpeg"];
     for c in candidates {
         if Path::new(c).is_file() {
@@ -65,7 +74,7 @@ pub(crate) fn find_ffmpeg() -> Option<String> {
 }
 
 fn ffmpeg(app: &AppHandle) -> Result<Command, String> {
-    let bin = find_ffmpeg().ok_or("ffmpeg was not found. Install it with: brew install ffmpeg")?;
+    let bin = find_ffmpeg().ok_or("ffmpeg is missing from the app. Reinstall Ampliflare Audio.")?;
     // -y overwrites, -nostdin stops it waiting for a keypress, -loglevel error keeps output small.
     Ok(app.shell().command(bin).args(["-y", "-nostdin", "-loglevel", "error"]))
 }

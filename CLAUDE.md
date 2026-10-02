@@ -2,7 +2,8 @@
 
 Desktop audio toolkit built with Tauri v2. Rust stays a thin glue layer.
 Heavy work runs in sidecar binaries: `deep-filter` for noise reduction and
-`ffmpeg` for decode, encode, convert and cut.
+`ffmpeg` for decode, encode, convert and cut. Both are bundled as sidecars
+(ffmpeg as `ampliflare-ffmpeg`) and fetched by `scripts/fetch-sidecars.sh`.
 
 ## Commit messages
 

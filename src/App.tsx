@@ -381,8 +381,8 @@ export default function App() {
           <div className="banner">
             <Icon name="warning" />
             <span>
-              ffmpeg was not found. Install it with{" "}
-              <code>brew install ffmpeg</code> and reopen the app.
+              ffmpeg is missing from the app, so files cannot be read. Reinstall Ampliflare Audio from
+              the website.
             </span>
           </div>
         )}

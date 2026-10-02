@@ -34,7 +34,8 @@
     "active": true,
     "targets": "all",
     "externalBin": [
-      "binaries/deep-filter"
+      "binaries/deep-filter",
+      "binaries/ampliflare-ffmpeg"
     ],
     "icon": [
       "icons/32x32.png",
@@ -65,7 +66,6 @@
       },
       "deb": {
         "recommends": [
-          "ffmpeg",
           "gstreamer1.0-plugins-good",
           "gstreamer1.0-libav"
         ],
@@ -73,7 +73,6 @@
       },
       "rpm": {
         "recommends": [
-          "ffmpeg",
           "gstreamer1-plugins-good"
         ]
       }
