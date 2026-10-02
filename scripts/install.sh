@@ -66,9 +66,6 @@ has_fuse2() {
 
 warn_dependencies() {
   local missing_fuse=0
-  if ! command -v ffmpeg >/dev/null 2>&1; then
-    say 'Warning: ffmpeg is missing. Install it with apt, dnf, or pacman.'
-  fi
   if ! has_fuse2; then
     say 'Warning: libfuse2 is missing. AppImage needs FUSE.'
     say 'Try sudo apt install libfuse2 (Ubuntu 24.04: libfuse2t64).'

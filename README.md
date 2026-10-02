@@ -28,13 +28,13 @@ Every tool but Cut and Split runs on a whole list of files at once. A bar at the
 
 ## Install
 
-Download the app for your computer from [the website](https://ampliflare.purplecandy.dev). It uses ffmpeg to read and write audio, so install that too.
+Download the app for your computer from [the website](https://ampliflare.purplecandy.dev). Everything it needs comes inside, so there is nothing else to install.
 
-| System | App | ffmpeg |
-| --- | --- | --- |
-| macOS | Open the disk image and drag the app to Applications. It is signed and notarized. | `brew install ffmpeg` |
-| Windows | Run the setup file. It is not code-signed yet, so SmartScreen asks once: More info, then Run anyway. | `winget install ffmpeg` |
-| Linux | Run the command below, or use the AppImage, .deb or .rpm. | `sudo apt install ffmpeg` |
+| System | How |
+| --- | --- |
+| macOS | Open the disk image and drag the app to Applications. It is signed and notarized. |
+| Windows | Run the setup file. It is not code-signed yet, so SmartScreen asks once: More info, then Run anyway. |
+| Linux | Run the command below, or use the AppImage, .deb or .rpm. |
 
 On Linux this installs the AppImage for your user, checks it against the release's checksums, and adds it to your app menu:
 
@@ -53,7 +53,7 @@ The downloaded app is free for personal use, up to 20 files a week. A [license](
 - The spectrogram is computed in Rust with `rustfft` and drawn on a canvas. See `src-tauri/src/analyze.rs` and `src/components/Spectrogram.tsx`.
 - The Rust side is thin. It builds command lines, runs two outside programs and reports progress.
 - `deep-filter` does the noise reduction. It ships inside the app as a sidecar binary.
-- `ffmpeg` does decode, encode, cut and loudness. For now it must be installed on the machine.
+- `ffmpeg` does decode, encode, cut and loudness. It ships inside the app too, as `ampliflare-ffmpeg`, a prebuilt GPLv3 build. Its source is next to the binaries in the R2 bucket, under `ampliflare-audio/ffmpeg/`.
 
 ```
 src/            React + TypeScript UI
@@ -64,10 +64,9 @@ scripts/        helper scripts
 
 ## Run it
 
-You need Node 22, pnpm, Rust and ffmpeg.
+You need Node 22, pnpm and Rust. The fetch script downloads deep-filter and ffmpeg.
 
 ```sh
-brew install ffmpeg
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 pnpm install
 ./scripts/fetch-sidecars.sh
@@ -104,7 +103,6 @@ release with an in-app updater feed. See [docs/releasing.md](docs/releasing.md).
 
 ## Not done yet
 
-- Bundle a static ffmpeg so users do not need to install it. Use an LGPL build.
 - Dereverb. Needs a second model and a real inference runtime.
 - Windows testing. CI builds it, but nobody has run it yet. It is not Authenticode signed.
 
