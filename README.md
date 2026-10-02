@@ -1,17 +1,50 @@
 # Ampliflare Audio
 
-A small desktop audio toolkit. Drop in files, pick an action, get clean files back.
-Everything runs on your machine. Nothing is uploaded.
+<img align="left" src="src-tauri/icons/icon.png" height="180" width="180" alt=""/>
 
-Download it from [ampliflare.purplecandy.dev](https://ampliflare.purplecandy.dev).
+Studio-quality voice, without the studio.
 
-What it does today:
+On-device machine learning strips background noise from speech, so podcasts, voiceovers and audiobooks sound studio-clean.
 
-- **Remove noise** with DeepFilterNet3, a speech noise reduction model that runs on device
-- **Enhance** by evening out loudness and cutting low rumble
-- **Cut** a file down to a start and end time, picked on a spectrogram
-- **Split** a file into pieces at points you mark on the spectrogram
+Everything runs on your computer, so **nothing is ever uploaded**. It works on macOS, Windows and Linux.
+
+[Website](https://ampliflare.purplecandy.dev) · [Docs](https://ampliflare.purplecandy.dev/docs/) · [Release notes](https://ampliflare.purplecandy.dev/docs/releases/latest/)
+
+<br clear="left"/>
+
+![Ampliflare Audio removing noise from three recordings](docs/images/screenshot.png)
+
+---
+
+## What it does
+
+- **Remove noise** with DeepFilterNet3, a speech noise reduction model that runs on device, with a Strength slider
+- **Enhance** by evening out loudness for music, podcasts, audiobooks or broadcast, and cutting low rumble
+- **Cut** a file down to a start and end point, picked on a picture of the sound
+- **Split** a file into parts at points you mark, or into equal parts
 - **Convert** between wav, mp3, m4a, flac, ogg and opus
+
+Every tool but Cut and Split runs on a whole list of files at once. A bar at the bottom says where results go and how they are named, and your originals are never changed.
+
+## Install
+
+Download the app for your computer from [the website](https://ampliflare.purplecandy.dev). It uses ffmpeg to read and write audio, so install that too.
+
+| System | App | ffmpeg |
+| --- | --- | --- |
+| macOS | Open the disk image and drag the app to Applications. It is signed and notarized. | `brew install ffmpeg` |
+| Windows | Run the setup file. It is not code-signed yet, so SmartScreen asks once: More info, then Run anyway. | `winget install ffmpeg` |
+| Linux | Run the command below, or use the AppImage, .deb or .rpm. | `sudo apt install ffmpeg` |
+
+On Linux this installs the AppImage for your user, checks it against the release's checksums, and adds it to your app menu:
+
+```sh
+curl -fsSL https://static.purplecandy.dev/ampliflare-audio/releases/latest/download/install.sh | bash
+```
+
+The app updates itself. When a new version is out, a bar at the top offers to install it.
+
+The downloaded app is free for personal use, up to 20 files a week. A [license](https://ampliflare.purplecandy.dev/docs/license/), at a price you pick, adds commercial use and removes the limit. A build from this source is free for any use. See [License](#license).
 
 ## How it is built
 
@@ -49,6 +82,9 @@ Debug builds can start with files already loaded and a tab already open:
 AMPLIFLARE_DEV_FILES="/path/a.wav:/path/b.mp3" AMPLIFLARE_DEV_ACTION=cut pnpm tauri dev
 ```
 
+A build from source has no weekly limit. To try the limit and the license key,
+add `AMPLIFLARE_OFFICIAL_BUILD=1`, which CI sets for the downloadable app.
+
 Rust tests need ffmpeg installed:
 
 ```sh
@@ -65,12 +101,6 @@ The result lands in `src-tauri/target/release/bundle/`.
 
 CI builds, signs and notarizes every pull request. Pushing a `v*` tag publishes a
 release with an in-app updater feed. See [docs/releasing.md](docs/releasing.md).
-
-## Install on Linux
-
-```sh
-curl -fsSL https://static.purplecandy.dev/ampliflare-audio/releases/latest/download/install.sh | bash
-```
 
 ## Not done yet
 
