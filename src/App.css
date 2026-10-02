@@ -117,6 +117,8 @@ button.row.active .icon {
 
 /* Content pane */
 .content {
+  /* Pico gives every <section> a bottom margin, which left a gap under the output bar. */
+  margin-bottom: 0;
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -150,6 +152,21 @@ button.row.active .icon {
   font-weight: 700;
   background: color-mix(in srgb, var(--adw-accent-bg) 30%, var(--adw-window-bg));
   border-bottom: 1px solid var(--adw-border);
+}
+.banner-ok {
+  background: color-mix(in srgb, var(--adw-success) 22%, var(--adw-window-bg));
+}
+.banner > span {
+  flex: 1;
+}
+.banner-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.banner > button {
+  flex: none;
 }
 .banner code {
   font-weight: 400;
@@ -592,4 +609,9 @@ button.token {
 }
 .popover.help nav a .icon {
   color: var(--adw-dim-fg);
+}
+
+.headerbar-end button.suggested,
+.headerbar-end button.destructive {
+  white-space: nowrap;
 }

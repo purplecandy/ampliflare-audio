@@ -57,7 +57,14 @@ export interface Analysis {
   peaks: number[];
 }
 
-export const FORMATS = ["mp3", "wav", "m4a", "flac", "ogg", "opus"] as const;
+/** Output formats for Convert, grouped for the dropdown. */
+export const FORMAT_GROUPS = [
+  { label: "Common", formats: ["mp3", "wav", "m4a", "flac", "ogg", "opus"] },
+  { label: "Studio and lossless", formats: ["aiff", "caf", "w64", "wv"] },
+  { label: "Other", formats: ["aac", "oga", "wma", "ac3", "mp2", "mka"] },
+] as const;
+/** Formats that are lossy, so they get a quality (bitrate) choice. */
+export const LOSSY_FORMATS: readonly string[] = ["mp3", "m4a", "aac", "ogg", "oga", "opus", "wma", "ac3", "mp2"];
 export const BITRATES = ["128k", "192k", "256k", "320k"] as const;
 
 export function fmtTime(seconds: number, decimals = 1): string {

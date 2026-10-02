@@ -39,7 +39,50 @@ pub struct Tools {
     pub ffmpeg: Option<String>,
 }
 
-const AUDIO_EXTS: &[&str] = &["wav", "mp3", "m4a", "aac", "flac", "ogg", "opus", "aiff", "aif", "wma"];
+const AUDIO_EXTS: &[&str] = &[
+    "wav",
+    "mp3",
+    "m4a",
+    "aac",
+    "flac",
+    "ogg",
+    "oga",
+    "opus",
+    "wma",
+    "aiff",
+    "aif",
+    "aifc",
+    "caf",
+    "au",
+    "snd",
+    "w64",
+    "amr",
+    "awb",
+    "3ga",
+    "mp2",
+    "mp1",
+    "mka",
+    "weba",
+    "spx",
+    "ac3",
+    "eac3",
+    "dts",
+    "m4b",
+    "m4r",
+    "wv",
+    "ape",
+    "tta",
+    "tak",
+    "mpc",
+    "dsf",
+    "mlp",
+    "thd",
+    "voc",
+    "gsm",
+    "oma",
+    "at3",
+    "ra",
+];
 
 fn report(app: &AppHandle, id: &str, step: &str) {
     let _ = app.emit("job-progress", Progress { id: id.to_string(), step: step.to_string() });
@@ -159,7 +202,13 @@ fn encode_args(ext: &str, bitrate: Option<&str>) -> Vec<String> {
     match ext {
         "mp3" => vec!["-c:a".into(), "libmp3lame".into(), "-b:a".into(), br],
         "m4a" | "aac" => vec!["-c:a".into(), "aac".into(), "-b:a".into(), br],
-        "ogg" => vec!["-c:a".into(), "libvorbis".into(), "-b:a".into(), br],
+        "ogg" | "oga" => vec!["-c:a".into(), "libvorbis".into(), "-b:a".into(), br],
+        "wma" => vec!["-c:a".into(), "wmav2".into(), "-b:a".into(), br],
+        "ac3" => vec!["-c:a".into(), "ac3".into(), "-b:a".into(), br],
+        "mp2" => vec!["-c:a".into(), "mp2".into(), "-b:a".into(), br],
+        // WavPack's encoder fails on the odd frame sizes mp3 and ogg decode to.
+        "wv" => vec!["-frame_size".into(), "4096".into()],
+        "mka" => vec!["-c:a".into(), "flac".into()],
         "opus" => vec!["-c:a".into(), "libopus".into(), "-b:a".into(), br],
         _ => vec![],
     }
