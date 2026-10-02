@@ -20,11 +20,13 @@ import {
   type ActionKind,
   type Analysis,
   type LicenseStatus,
+  type LogItem,
   type Progress,
   type QueuedFile,
   type SaveTo,
   type Tools,
 } from "./types";
+import { ActivityLog } from "./components/ActivityLog";
 import { buildNotice, type Notice, type RunResult } from "./notice";
 import "./App.css";
 
@@ -112,6 +114,8 @@ export default function App() {
   const [tools, setTools] = useState<Tools | null>(null);
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [log, setLog] = useState<LogItem[]>([]);
+  const [logOpen, setLogOpen] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [analyses, setAnalyses] = useState<Record<string, AnalysisState>>({});
   const [license, setLicense] = useState<LicenseStatus | null>(null);
@@ -297,6 +301,9 @@ export default function App() {
     const saved: RunResult["saved"] = [];
     const failed: RunResult["failed"] = [];
     let hitLimit = false;
+    const runId = String(Date.now());
+    const record = (f: QueuedFile, item: Pick<LogItem, "status" | "outputs" | "error">) =>
+      setLog((prev) => [...prev, { id: `${runId}-${f.id}`, runId, at: Date.now(), action, input: f.name, ...item }]);
     for (const f of todo) {
       if (cancelRef.current) break;
       setFiles((prev) =>
@@ -322,9 +329,11 @@ export default function App() {
           ),
         );
         saved.push({ name: f.name, outputs });
+        record(f, { status: "done", outputs });
       } catch (err) {
         const message = typeof err === "string" ? err : String(err);
         failed.push({ name: f.name });
+        record(f, { status: "error", outputs: [], error: message });
         setFiles((prev) =>
           prev.map((x) =>
             x.id === f.id
@@ -580,8 +589,11 @@ export default function App() {
           onPickFolder={pickOutputDir}
           onReveal={revealOutput}
           onPattern={setNamePattern}
+          logCount={log.length}
+          onOpenLog={() => setLogOpen(true)}
         />
       </section>
+      {logOpen && <ActivityLog items={log} onClose={() => setLogOpen(false)} />}
     </div>
   );
 }

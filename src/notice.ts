@@ -70,3 +70,19 @@ export function buildNotice(r: RunResult): Notice | null {
   if (r.limitReached) text += " You’ve reached the weekly limit.";
   return { ok: failed.length === 0 && !r.stopped && !r.limitReached, text, reveal: saved[0].outputs[0] };
 }
+
+/** A short name for what was done, for headings. */
+export function actionTitle(action: Action): string {
+  switch (action.kind) {
+    case "denoise":
+      return "Removed noise";
+    case "enhance":
+      return "Enhanced";
+    case "cut":
+      return "Cut";
+    case "split":
+      return "Split";
+    case "convert":
+      return `Converted to ${action.format}`;
+  }
+}

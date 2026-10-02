@@ -5,6 +5,7 @@ export type IconName =
   | "folder"
   | "trash"
   | "reload"
+  | "history"
   | "noise"
   | "enhance"
   | "cut"
@@ -29,6 +30,7 @@ const SHAPES: Record<IconName, ReactElement> = {
   plus: <path d="M8 3v10M3 8h10" />,
   folder: <path d="M2 5a1.5 1.5 0 0 1 1.5-1.5h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6.5v5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z" />,
   trash: <path d="M3 4.5h10M6.2 4.5V3h3.6v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5M6.8 7.2v3.8M9.2 7.2v3.8" />,
+  history: <path d="M2.5 8a5.5 5.5 0 1 0 1.8-4.07M2.5 2.5v3h3M8 5v3.2l2 1.3" />,
   reload: <path d="M13 8a5 5 0 1 1-1.5-3.55M13 2.5v3h-3" />,
   noise: <path d="M1.5 8h1.8l1.4-3.5L7 12l2-8 1.5 6 1.2-2h2.8" />,
   enhance: (

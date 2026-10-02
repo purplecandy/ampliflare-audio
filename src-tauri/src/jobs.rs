@@ -220,6 +220,30 @@ pub fn check_tools(app: AppHandle) -> Tools {
     Tools { deep_filter, ffmpeg: find_ffmpeg() }
 }
 
+/// Files bigger than this are streamed from disk instead of read into memory.
+const MAX_PLAY_BYTES: u64 = 300 * 1024 * 1024;
+
+/// Read a whole audio file so the window can play it from memory. Streaming it
+/// through the asset protocol sends a new request on every seek, which lags.
+#[tauri::command]
+pub async fn read_audio(path: String) -> Result<tauri::ipc::Response, String> {
+    if !is_audio_file(path.clone()) {
+        return Err("Not an audio file".into());
+    }
+    let meta = tokio::fs::metadata(&path).await.map_err(|e| format!("Cannot read file: {e}"))?;
+    if meta.len() > MAX_PLAY_BYTES {
+        return Err("Too big to load at once".into());
+    }
+    let bytes = tokio::fs::read(&path).await.map_err(|e| format!("Cannot read file: {e}"))?;
+    Ok(tauri::ipc::Response::new(bytes))
+}
+
+/// Which of these files are still on disk. The activity log uses it to know what can be played.
+#[tauri::command]
+pub fn files_exist(paths: Vec<String>) -> Vec<bool> {
+    paths.iter().map(|p| Path::new(p).is_file()).collect()
+}
+
 #[tauri::command]
 pub fn is_audio_file(path: String) -> bool {
     Path::new(&path)

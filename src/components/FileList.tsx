@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { Icon, type IconName } from "./Icon";
+import { Player, useAudioPlayer } from "./Player";
 import type { QueuedFile } from "../types";
 
 interface Props {
@@ -34,10 +36,19 @@ function statusText(f: QueuedFile): string {
 }
 
 export function FileList({ files, selectedId, selectable, busy, onSelect, onRemove }: Props) {
+  const player = useAudioPlayer();
+
+  // Stop when the playing file leaves the list.
+  useEffect(() => {
+    if (player.activeKey && !files.some((f) => f.id === player.activeKey)) player.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [files]);
+
   if (files.length === 0) return null;
 
   return (
     <>
+      {player.element}
       <div className="list-header">
         <span className="title">
           {files.length} file{files.length === 1 ? "" : "s"}
@@ -66,6 +77,7 @@ export function FileList({ files, selectedId, selectable, busy, onSelect, onRemo
                 </span>
                 <span className={`row-subtitle ${f.status === "error" ? "status-error" : ""}`}>{statusText(f)}</span>
               </div>
+              <Player player={player} id={f.id} path={f.path} />
               <div className="row-actions">
                 {f.status === "done" && f.outputs?.[0] && (
                   <button

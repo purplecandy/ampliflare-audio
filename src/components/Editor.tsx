@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { Icon } from "./Icon";
+import { sourceFor } from "./Player";
 import { Spectrogram } from "./Spectrogram";
 import { fmtTime, type Action, type Analysis, type QueuedFile } from "../types";
 
@@ -24,6 +24,8 @@ export function Editor({ file, analysis, loading, error, action, onChange, disab
   const [playhead, setPlayhead] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [canPlay, setCanPlay] = useState(true);
+  // The file read into memory, so seeking is instant. Empty until it has loaded.
+  const [src, setSrc] = useState<string | null>(null);
   const [evenly, setEvenly] = useState(2);
   // Playing one part stops at its end.
   const stopAtRef = useRef<number | null>(null);
@@ -41,7 +43,14 @@ export function Editor({ file, analysis, loading, error, action, onChange, disab
     setPlayhead(0);
     setPlaying(false);
     setCanPlay(true);
-  }, [file?.id]);
+    setSrc(null);
+    if (!file) return;
+    let current = true;
+    void sourceFor(file.path).then((url) => current && setSrc(url));
+    return () => {
+      current = false;
+    };
+  }, [file?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Follow the audio while it plays. Stop at the end of the cut range.
   useEffect(() => {
@@ -71,15 +80,16 @@ export function Editor({ file, analysis, loading, error, action, onChange, disab
 
   async function togglePlay(from?: { start: number; end: number }) {
     const a = audioRef.current;
-    if (!a) return;
+    if (!a || !src) return;
     if (playing && !from) {
       a.pause();
       setPlaying(false);
       return;
     }
     stopAtRef.current = from?.end ?? null;
-    if (from) seek(from.start);
-    else if (action.kind === "cut" && (playhead < range.start || playhead >= range.end)) seek(range.start);
+    // Always seek, since a click on the picture before the audio loaded only moved the playhead.
+    const outsideCut = action.kind === "cut" && (playhead < range.start || playhead >= range.end);
+    seek(from ? from.start : outsideCut ? range.start : playhead);
     try {
       await a.play();
       setPlaying(true);
@@ -153,7 +163,7 @@ export function Editor({ file, analysis, loading, error, action, onChange, disab
       <article className="editor" onKeyDown={onKeyDown}>
         <audio
           ref={audioRef}
-          src={convertFileSrc(file.path)}
+          src={src ?? undefined}
           preload="auto"
           onEnded={() => setPlaying(false)}
           onError={() => setCanPlay(false)}
@@ -179,7 +189,7 @@ export function Editor({ file, analysis, loading, error, action, onChange, disab
               type="button"
               className="circular"
               onClick={() => void togglePlay()}
-              disabled={!canPlay}
+              disabled={!canPlay || !src}
               aria-label={playing ? "Pause" : "Play"}
               title={canPlay ? "" : "This format cannot be played here"}
             >
@@ -261,7 +271,7 @@ export function Editor({ file, analysis, loading, error, action, onChange, disab
                   type="button"
                   className="flat circular"
                   aria-label={`Play part ${i + 1}`}
-                  disabled={!canPlay}
+                  disabled={!canPlay || !src}
                   onClick={() => void togglePlay(p)}
                 >
                   <Icon name="play" />

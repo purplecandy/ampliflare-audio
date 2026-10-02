@@ -74,3 +74,16 @@ export function fmtTime(seconds: number, decimals = 1): string {
   const r = decimals > 0 ? rest.toFixed(decimals).padStart(3 + decimals, "0") : String(Math.floor(rest)).padStart(2, "0");
   return `${m}:${r}`;
 }
+
+/** One finished file in the session's activity log. */
+export interface LogItem {
+  id: string;
+  /** Files from the same press of the run button share a run. */
+  runId: string;
+  at: number;
+  action: Action;
+  input: string;
+  status: "done" | "error";
+  outputs: string[];
+  error?: string;
+}
