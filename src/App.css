@@ -513,7 +513,10 @@ button.split-here {
   margin: 0 0.35rem;
   background: var(--adw-border);
 }
-.outputbar .status {
+.outputbar-end {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   margin-left: auto;
   padding-left: 0.5rem;
 }
@@ -614,4 +617,64 @@ button.token {
 .headerbar-end button.suggested,
 .headerbar-end button.destructive {
   white-space: nowrap;
+}
+
+/* The play and seek control on each file row */
+.row-player {
+  display: flex;
+  flex: 0 1 15rem;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+.row-player input[type="range"] {
+  flex: 1;
+  min-width: 3rem;
+  margin: 0;
+}
+.player-time {
+  flex: none;
+  min-width: 5.5ch;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--adw-dim-fg);
+  white-space: nowrap;
+}
+
+/* Activity log sheet */
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(0, 0, 0, 0.35);
+}
+.sheet {
+  display: flex;
+  flex-direction: column;
+  width: min(34rem, 100%);
+  height: 100%;
+  background: var(--adw-view-bg);
+  border-left: 1px solid var(--adw-border);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.25);
+}
+.sheet .headerbar {
+  background: var(--adw-headerbar-bg);
+  border-bottom: 1px solid var(--adw-border);
+}
+.sheet-body {
+  flex: 1;
+  padding: 1rem 1.25rem 2rem;
+  overflow-y: auto;
+}
+.sheet .status-page {
+  padding-top: 3rem;
+}
+.sheet .status-page .status-icon {
+  width: 96px;
+  height: 96px;
+}
+.sheet .row-player {
+  flex-basis: 11rem;
 }

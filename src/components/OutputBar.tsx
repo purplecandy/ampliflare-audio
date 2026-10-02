@@ -18,6 +18,8 @@ interface Props {
   onPickFolder: () => void;
   onReveal: () => void;
   onPattern: (p: string) => void;
+  logCount: number;
+  onOpenLog: () => void;
 }
 
 function baseName(p: string): string {
@@ -149,11 +151,17 @@ export function OutputBar(props: Props) {
         {preview}
       </span>
 
-      {doneCount > 0 && (
-        <span className="status">
-          {doneCount} of {fileCount} saved
-        </span>
-      )}
+      <div className="outputbar-end">
+        {doneCount > 0 && (
+          <span className="status">
+            {doneCount} of {fileCount} saved
+          </span>
+        )}
+        <button type="button" className="flat" title="Activity log" onClick={props.onOpenLog}>
+          <Icon name="history" />
+          Activity{props.logCount > 0 ? ` (${props.logCount})` : ""}
+        </button>
+      </div>
     </footer>
   );
 }

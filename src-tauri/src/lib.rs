@@ -20,6 +20,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             jobs::check_tools,
             jobs::is_audio_file,
+            jobs::files_exist,
+            jobs::read_audio,
             jobs::run_job,
             jobs::dev_start,
             analyze::analyze_audio,
