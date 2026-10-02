@@ -51,6 +51,8 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       TAG: ${{ github.ref_name }}
       DOWNLOADS: https://static.purplecandy.dev/ampliflare-audio
+      # The site's release notes, one page per version, from site/.
+      SITE: https://ampliflare.purplecandy.dev
       # Bucket and folder behind DOWNLOADS.
       R2_PREFIX: s3://static/ampliflare-audio/releases
     steps:
@@ -73,7 +75,14 @@ jobs:
             gh release create "$TAG" -R "$GITHUB_REPOSITORY" --draft --verify-tag "${pre[@]}" \
               --title "Ampliflare Audio ${TAG#v}" --generate-notes
           fi
-          gh release view "$TAG" -R "$GITHUB_REPOSITORY" --json body --jq .body > "$RUNNER_TEMP/notes.md"
+          # The in-app update note points at the site's release notes, not at
+          # GitHub's commit list, which only people with repo access can open.
+          # A pre-release has no page of its own, so it points at the newest.
+          ver=${TAG#v}
+          page=${ver//./-}
+          [[ "$TAG" == *-* ]] && page=latest
+          echo "What's new in $ver: $SITE/docs/releases/$page/" > "$RUNNER_TEMP/notes.md"
+          cat "$RUNNER_TEMP/notes.md"
 
       - name: Add install script, icon and update manifest
         run: |

@@ -69,6 +69,12 @@ get secrets, so they always get that build. To open an unsigned Mac build, run
 
 ## Cut a release
 
+0. Write the release notes in the site first, and deploy it. The app's update
+   banner links to `https://ampliflare.purplecandy.dev/docs/releases/1-2-0/`
+   for version 1.2.0, so the page must exist before the tag goes out. Add
+   `site/src/content/docs/docs/releases/1-2-0.mdx`, a card for it in
+   `releases/index.mdx`, and a short entry in `site/src/content/changelog/`.
+   `/docs/releases/latest` follows the newest page on its own.
 1. Bump the version in `package.json`, `src-tauri/Cargo.toml` and
    `src-tauri/tauri.conf.json`. `node scripts/ci/check-version.mjs` checks they match.
 2. Commit, then tag and push:

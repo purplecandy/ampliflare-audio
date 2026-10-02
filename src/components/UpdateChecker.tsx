@@ -1,11 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type Update } from "@tauri-apps/plugin-updater";
+import { SITE_URL, openLink } from "../links";
 
 type CheckResult = "available" | "current" | "error";
 
 let checkNow: (() => Promise<CheckResult>) | null = null;
+
+/** The site's notes for a version: 1.2.0 is /docs/releases/1-2-0/. A pre-release has none, so it gets the newest. */
+function notesUrl(version: string): string {
+  const page = /^\d+\.\d+\.\d+$/.test(version) ? version.split(".").join("-") : "latest";
+  return `${SITE_URL}/docs/releases/${page}/`;
+}
 
 export function checkForUpdates(): Promise<CheckResult> {
   return checkNow?.() ?? Promise.resolve("error");
@@ -90,13 +96,22 @@ export function UpdateChecker() {
   }
 
   if (!update) return null;
-  const notes = update.body?.trim().slice(0, 200);
+  const whatsNew = notesUrl(update.version);
 
   return (
     <div className="banner" role="status">
       <span className="row-text">
         <strong>Version {update.version} is ready</strong>
-        {notes && <span className="row-subtitle">{notes}</span>}
+        <a
+          href={whatsNew}
+          className="row-subtitle"
+          onClick={(e) => {
+            e.preventDefault();
+            openLink(whatsNew);
+          }}
+        >
+          What's new in {update.version}
+        </a>
         {installing && (
           <>
             <span className="row-subtitle">{finished ? "Installing..." : "Downloading..."}</span>
@@ -109,11 +124,11 @@ export function UpdateChecker() {
         {error && (
           <span className="status-error">
             {error} {" "}
-            <a href="https://github.com/purplecandy/ampliflare-audio/releases/latest" onClick={(e) => {
+            <a href={`${SITE_URL}/`} onClick={(e) => {
               e.preventDefault();
-              void openUrl(e.currentTarget.href).catch(console.warn);
+              openLink(e.currentTarget.href);
             }}>
-              Download from GitHub
+              Download it from the website
             </a>
           </span>
         )}
