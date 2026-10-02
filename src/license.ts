@@ -6,8 +6,8 @@ import type { LicenseStatus } from "./types";
 
 // TODO: point this at the site's buy box (site/ SITE_URL + "/#buy") once the
 // site has an address, so people can pick their price. Until then it opens
-// the checkout at the suggested $15.
-export const BUY_URL = "https://checkout.dodopayments.com/buy/pdt_0NobndRz8QFm6LfKHxgdr?paymentAmount=15";
+// the checkout at the suggested $40.
+export const BUY_URL = "https://checkout.dodopayments.com/buy/pdt_0NobndRz8QFm6LfKHxgdr?paymentAmount=40";
 
 export function openBuyPage() {
   void openUrl(BUY_URL).catch(console.warn);
