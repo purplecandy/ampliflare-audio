@@ -1,6 +1,6 @@
 [package]
 name = "ampliflare-audio"
-version = "1.0.0"
+version = "1.0.1"
 description = "Simple audio toolkit with on device noise reduction"
 authors = ["Nadeem Siddique"]
 license = "AGPL-3.0-only"
