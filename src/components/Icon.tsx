@@ -20,7 +20,8 @@ export type IconName =
   | "palette"
   | "reveal"
   | "braces"
-  | "key";
+  | "key"
+  | "help";
 
 /* Small symbolic icons in the GNOME style. All on a 16px grid. */
 const SHAPES: Record<IconName, ReactElement> = {
@@ -85,6 +86,12 @@ const SHAPES: Record<IconName, ReactElement> = {
     <>
       <circle cx="5.5" cy="10.5" r="3" />
       <path d="M7.7 8.3 13.5 2.5M11.2 4.8l1.8 1.8M12.8 3.2l1.4 1.4" />
+    </>
+  ),
+  help: (
+    <>
+      <circle cx="8" cy="8" r="6.2" />
+      <path d="M6.3 6.2a1.8 1.8 0 1 1 2.5 1.7c-.5.2-.8.6-.8 1.1v.4M8 11.6h.01" />
     </>
   ),
   braces: <path d="M6 2.5c-1.4 0-2 .6-2 1.9v1.4c0 1-.5 1.7-1.5 2.2 1 .5 1.5 1.2 1.5 2.2v1.4c0 1.3.6 1.9 2 1.9M10 2.5c1.4 0 2 .6 2 1.9v1.4c0 1 .5 1.7 1.5 2.2-1 .5-1.5 1.2-1.5 2.2v1.4c0 1.3-.6 1.9-2 1.9" />,

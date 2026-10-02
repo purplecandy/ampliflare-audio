@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { TOOLS } from "./ActionPanel";
 import { AppearanceMenu } from "./AppearanceMenu";
+import { HelpMenu } from "./HelpMenu";
 import { Icon } from "./Icon";
 import { LicenseMenu } from "./LicenseMenu";
 import { checkForUpdates } from "./UpdateChecker";
@@ -59,6 +60,7 @@ export function Sidebar({ kind, busy, onKind, license, onLicense }: Props) {
       <footer className="sidebar-footer">
         {license && <LicenseMenu status={license} onStatus={onLicense} />}
         <AppearanceMenu />
+        <HelpMenu />
         <button type="button" className="row" onClick={checkUpdates} disabled={updateStatus === "Checking..." || !("__TAURI_INTERNALS__" in window) || import.meta.env.DEV}>
           <span className="row-text">
             <span className="row-title">{updateStatus || "Check for updates"}</span>
