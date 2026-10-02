@@ -120,6 +120,8 @@ export default function App() {
   const [analyses, setAnalyses] = useState<Record<string, AnalysisState>>({});
   const [license, setLicense] = useState<LicenseStatus | null>(null);
   const cancelRef = useRef(false);
+  // The file being worked on now, so Stop knows which job to end.
+  const runningRef = useRef<string | null>(null);
 
   const isEditor = EDITOR_KINDS.includes(action.kind);
   const selected = files.find((f) => f.id === selectedId) ?? null;
@@ -195,7 +197,7 @@ export default function App() {
     const unlisten = listen<Progress>("job-progress", (e) => {
       setFiles((prev) =>
         prev.map((f) =>
-          f.id === e.payload.id ? { ...f, step: e.payload.step } : f,
+          f.id === e.payload.id ? { ...f, step: e.payload.step, percent: e.payload.percent ?? undefined } : f,
         ),
       );
     });
@@ -289,6 +291,17 @@ export default function App() {
     );
   }
 
+  /** End the file being worked on now and skip the rest. */
+  function stopNow() {
+    cancelRef.current = true;
+    if (runningRef.current) void invoke("stop_job", { id: runningRef.current });
+  }
+
+  /** End one file. The rest of the list carries on. */
+  function stopFile(id: string) {
+    void invoke("stop_job", { id });
+  }
+
   async function runAll() {
     if (busy) return;
     const todo = isEditor
@@ -306,10 +319,11 @@ export default function App() {
       setLog((prev) => [...prev, { id: `${runId}-${f.id}`, runId, at: Date.now(), action, input: f.name, ...item }]);
     for (const f of todo) {
       if (cancelRef.current) break;
+      runningRef.current = f.id;
       setFiles((prev) =>
         prev.map((x) =>
           x.id === f.id
-            ? { ...x, status: "running", step: "Starting", error: undefined }
+            ? { ...x, status: "running", step: "Starting", percent: undefined, error: undefined }
             : x,
         ),
       );
@@ -324,7 +338,7 @@ export default function App() {
         setFiles((prev) =>
           prev.map((x) =>
             x.id === f.id
-              ? { ...x, status: "done", outputs, step: undefined }
+              ? { ...x, status: "done", outputs, step: undefined, percent: undefined }
               : x,
           ),
         );
@@ -332,12 +346,19 @@ export default function App() {
         record(f, { status: "done", outputs });
       } catch (err) {
         const message = typeof err === "string" ? err : String(err);
+        if (message === "Stopped") {
+          // Stopped by the user, not broken. It goes back to waiting so it can run again.
+          setFiles((prev) =>
+            prev.map((x) => (x.id === f.id ? { ...x, status: "waiting", step: undefined, percent: undefined } : x)),
+          );
+          continue;
+        }
         failed.push({ name: f.name });
         record(f, { status: "error", outputs: [], error: message });
         setFiles((prev) =>
           prev.map((x) =>
             x.id === f.id
-              ? { ...x, status: "error", error: message, step: undefined }
+              ? { ...x, status: "error", error: message, step: undefined, percent: undefined }
               : x,
           ),
         );
@@ -350,6 +371,7 @@ export default function App() {
         break;
       }
     }
+    runningRef.current = null;
     setBusy(false);
     setNotice(
       buildNotice({
@@ -455,14 +477,17 @@ export default function App() {
               <Icon name="trash" />
             </button>
             {busy ? (
-              <button
-                type="button"
-                className="destructive"
-                onClick={() => (cancelRef.current = true)}
-              >
-                <Icon name="stop" />
-                Stop after this file
-              </button>
+              <>
+                {files.some((f) => f.status === "waiting") && (
+                  <button type="button" className="flat" title="Finish this file, then stop" onClick={() => (cancelRef.current = true)}>
+                    Stop after this file
+                  </button>
+                )}
+                <button type="button" className="destructive" title="End the file being worked on now" onClick={stopNow}>
+                  <Icon name="stop" />
+                  Stop
+                </button>
+              </>
             ) : (
               <button
                 type="button"
@@ -545,6 +570,7 @@ export default function App() {
                   busy={busy}
                   onSelect={setSelectedId}
                   onRemove={removeFile}
+                  onStop={stopFile}
                 />
                 <DropZone compact active={dragging} onPick={pickFiles} />
 

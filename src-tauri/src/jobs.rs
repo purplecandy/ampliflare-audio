@@ -5,9 +5,24 @@
 //! This file only builds the command lines, runs them and reports progress.
 
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::sync::{LazyLock, Mutex};
 use tauri::{AppHandle, Emitter};
-use tauri_plugin_shell::{process::Command, ShellExt};
+use tauri_plugin_shell::process::{Command, CommandChild, CommandEvent};
+use tauri_plugin_shell::ShellExt;
+
+/// The program each job is running right now, so Stop can end it.
+static RUNNING: LazyLock<Mutex<HashMap<String, CommandChild>>> = LazyLock::new(Default::default);
+/// Jobs the user stopped. Checked before each step, so a stopped job never starts its next one.
+static STOPPED: LazyLock<Mutex<HashSet<String>>> = LazyLock::new(Default::default);
+
+/// The error a stopped job returns. The window checks for this exact text.
+const STOPPED_MSG: &str = "Stopped";
+
+fn is_stopped(id: &str) -> bool {
+    STOPPED.lock().unwrap().contains(id)
+}
 
 /// What the user asked to do with a file.
 #[derive(Debug, Clone, Deserialize)]
@@ -30,6 +45,8 @@ pub enum Action {
 pub struct Progress {
     pub id: String,
     pub step: String,
+    /// 0 to 100, when we know how long the step is.
+    pub percent: Option<f64>,
 }
 
 /// Which tools we can find on this machine.
@@ -84,8 +101,8 @@ const AUDIO_EXTS: &[&str] = &[
     "ra",
 ];
 
-fn report(app: &AppHandle, id: &str, step: &str) {
-    let _ = app.emit("job-progress", Progress { id: id.to_string(), step: step.to_string() });
+fn report(app: &AppHandle, id: &str, step: &str, percent: Option<f64>) {
+    let _ = app.emit("job-progress", Progress { id: id.to_string(), step: step.to_string(), percent });
 }
 
 /// Find ffmpeg. Apps opened from Finder get a tiny PATH, so check the usual spots too.
@@ -119,18 +136,89 @@ pub(crate) fn find_ffmpeg() -> Option<String> {
 fn ffmpeg(app: &AppHandle) -> Result<Command, String> {
     let bin = find_ffmpeg().ok_or("ffmpeg is missing from the app. Reinstall Ampliflare Audio.")?;
     // -y overwrites, -nostdin stops it waiting for a keypress, -loglevel error keeps output small.
-    Ok(app.shell().command(bin).args(["-y", "-nostdin", "-loglevel", "error"]))
+    // -progress pipe:1 prints how far it has got, which run() turns into a percent.
+    Ok(app.shell().command(bin).args(["-y", "-nostdin", "-loglevel", "error", "-progress", "pipe:1", "-nostats"]))
 }
 
-async fn run(cmd: Command, what: &str) -> Result<(), String> {
-    let out = cmd.output().await.map_err(|e| format!("{what} failed to start: {e}"))?;
-    if out.status.success() {
+/// How long the input is, so a step can say how far along it is. None if ffmpeg can't tell.
+async fn length_of(input: &Path) -> Option<f64> {
+    let ffmpeg = find_ffmpeg()?;
+    let input = input.to_path_buf();
+    tauri::async_runtime::spawn_blocking(move || crate::analyze::duration_seconds(&ffmpeg, &input).ok())
+        .await
+        .ok()
+        .flatten()
+        .filter(|s| *s > 0.0)
+}
+
+/// One step of a job: run a program and report its progress as it goes.
+/// `seconds` is how much audio the step writes, for the percent.
+/// `out` is the file the step writes. A stopped step deletes it, since it is only half done.
+async fn run(
+    app: &AppHandle,
+    id: &str,
+    cmd: Command,
+    what: &str,
+    label: &str,
+    seconds: Option<f64>,
+    out: Option<&Path>,
+) -> Result<(), String> {
+    if is_stopped(id) {
+        return Err(STOPPED_MSG.into());
+    }
+    report(app, id, label, seconds.map(|_| 0.0));
+    let (mut events, child) = cmd.spawn().map_err(|e| format!("{what} failed to start: {e}"))?;
+    RUNNING.lock().unwrap().insert(id.to_string(), child);
+
+    let mut stderr: Vec<String> = Vec::new();
+    let mut stdout: Vec<String> = Vec::new();
+    let mut code = None;
+    let mut last = -1.0;
+    while let Some(event) = events.recv().await {
+        match event {
+            CommandEvent::Stdout(line) => {
+                let line = String::from_utf8_lossy(&line).trim().to_string();
+                if let Some(us) = line.strip_prefix("out_time_us=") {
+                    if let (Some(total), Ok(us)) = (seconds, us.parse::<f64>()) {
+                        let percent = (us / 1e6 / total * 100.0).clamp(0.0, 100.0).floor();
+                        if percent != last {
+                            last = percent;
+                            report(app, id, label, Some(percent));
+                        }
+                    }
+                } else if !line.contains('=') && !line.is_empty() {
+                    stdout.push(line);
+                }
+            }
+            CommandEvent::Stderr(line) => stderr.push(String::from_utf8_lossy(&line).trim().to_string()),
+            CommandEvent::Error(e) => stderr.push(e),
+            CommandEvent::Terminated(payload) => code = payload.code,
+            _ => {}
+        }
+    }
+    RUNNING.lock().unwrap().remove(id);
+
+    if is_stopped(id) {
+        if let Some(out) = out {
+            let _ = tokio::fs::remove_file(out).await;
+        }
+        return Err(STOPPED_MSG.into());
+    }
+    if code == Some(0) {
         return Ok(());
     }
-    let err = String::from_utf8_lossy(&out.stderr);
-    let err = err.trim();
-    let err = if err.is_empty() { String::from_utf8_lossy(&out.stdout).trim().to_string() } else { err.to_string() };
-    Err(format!("{what} failed: {err}"))
+    let lines = if stderr.iter().any(|l| !l.is_empty()) { stderr } else { stdout };
+    let tail = lines.len().saturating_sub(20);
+    Err(format!("{what} failed: {}", lines[tail..].join("\n").trim()))
+}
+
+/// End a running job now. The program is killed and its half-written file deleted.
+#[tauri::command]
+pub fn stop_job(id: String) {
+    STOPPED.lock().unwrap().insert(id.clone());
+    if let Some(child) = RUNNING.lock().unwrap().remove(&id) {
+        let _ = child.kill();
+    }
 }
 
 fn stem_and_ext(input: &Path) -> Result<(String, String), String> {
@@ -265,7 +353,10 @@ pub async fn run_job(
     action: Action,
 ) -> Result<Vec<String>, String> {
     crate::license::check_quota(&app)?;
-    let outputs = run_action(app.clone(), id, input, output_dir, name_pattern, action).await?;
+    STOPPED.lock().unwrap().remove(&id);
+    let result = run_action(app.clone(), id.clone(), input, output_dir, name_pattern, action).await;
+    STOPPED.lock().unwrap().remove(&id);
+    let outputs = result?;
     crate::license::count_file(&app);
     Ok(outputs)
 }
@@ -286,37 +377,38 @@ async fn run_action(
     }
     tokio::fs::create_dir_all(&out_dir).await.map_err(|e| format!("Cannot create output folder: {e}"))?;
     let (stem, ext) = stem_and_ext(&input)?;
+    let length = length_of(&input).await;
 
     match action {
         Action::Denoise { strength } => {
-            let out = denoise(&app, &id, &input, &out_dir, &pattern, &stem, &ext, strength).await?;
-            Ok(vec![out])
+            let work = std::env::temp_dir().join("ampliflare").join(&id);
+            let result = denoise(&app, &id, &input, &work, &out_dir, &pattern, &stem, &ext, strength, length).await;
+            let _ = tokio::fs::remove_dir_all(&work).await;
+            Ok(vec![result?])
         }
         Action::Convert { format, bitrate } => {
-            report(&app, &id, "Converting");
             let fmt = format.to_lowercase();
             let out = output_path(&out_dir, &pattern, &stem, "", None, &fmt);
             let cmd = ffmpeg(&app)?
                 .args(["-i", &input.to_string_lossy()])
                 .args(encode_args(&fmt, bitrate.as_deref()))
                 .arg(&out);
-            run(cmd, "ffmpeg").await?;
+            run(&app, &id, cmd, "ffmpeg", "Converting", length, Some(&out)).await?;
             Ok(vec![out.to_string_lossy().to_string()])
         }
         Action::Cut { start, end } => {
-            report(&app, &id, "Cutting");
             let out = output_path(&out_dir, &pattern, &stem, "cut", None, &ext);
             let mut cmd = ffmpeg(&app)?.args(["-i", &input.to_string_lossy(), "-ss", &start.to_string()]);
             if let Some(end) = end {
                 cmd = cmd.args(["-to", &end.to_string()]);
             }
             let cmd = cmd.args(encode_args(&ext, None)).arg(&out);
-            run(cmd, "ffmpeg").await?;
+            let seconds = end.or(length).map(|e| e - start).filter(|s| *s > 0.0);
+            run(&app, &id, cmd, "ffmpeg", "Cutting", seconds, Some(&out)).await?;
             Ok(vec![out.to_string_lossy().to_string()])
         }
-        Action::Split { points } => split(&app, &id, &input, &out_dir, &pattern, &stem, &ext, points).await,
+        Action::Split { points } => split(&app, &id, &input, &out_dir, &pattern, &stem, &ext, points, length).await,
         Action::Enhance { target_lufs } => {
-            report(&app, &id, "Enhancing");
             let out = output_path(&out_dir, &pattern, &stem, "enhanced", None, &ext);
             // highpass drops rumble under 80 Hz. loudnorm brings speech to a standard level.
             let filter = format!("highpass=f=80,loudnorm=I={target_lufs}:TP=-1.5:LRA=11");
@@ -324,7 +416,7 @@ async fn run_action(
                 .args(["-i", &input.to_string_lossy(), "-af", &filter])
                 .args(encode_args(&ext, None))
                 .arg(&out);
-            run(cmd, "ffmpeg").await?;
+            run(&app, &id, cmd, "ffmpeg", "Enhancing", length, Some(&out)).await?;
             Ok(vec![out.to_string_lossy().to_string()])
         }
     }
@@ -340,6 +432,7 @@ async fn split(
     stem: &str,
     ext: &str,
     points: Vec<f64>,
+    length: Option<f64>,
 ) -> Result<Vec<String>, String> {
     let pattern = split_pattern(if pattern.trim().is_empty() { DEFAULT_PATTERN } else { pattern });
     let mut points: Vec<f64> = points.into_iter().filter(|p| *p > 0.0).collect();
@@ -353,7 +446,8 @@ async fn split(
     let mut start = 0.0;
     let pieces = points.len() + 1;
     for (i, end) in points.iter().map(Some).chain(std::iter::once(None)).enumerate() {
-        report(app, id, &format!("Writing part {} of {pieces}", i + 1));
+        let label = format!("Writing part {} of {pieces}", i + 1);
+        let seconds = end.copied().or(length).map(|e| e - start).filter(|s| *s > 0.0);
         let out = output_path(out_dir, &pattern, stem, &format!("part{}", i + 1), Some(i + 1), ext);
         let mut cmd = ffmpeg(app)?.args(["-i", &input.to_string_lossy(), "-ss", &start.to_string()]);
         if let Some(end) = end {
@@ -361,7 +455,15 @@ async fn split(
             start = *end;
         }
         let cmd = cmd.args(encode_args(ext, None)).arg(&out);
-        run(cmd, "ffmpeg").await?;
+        if let Err(e) = run(app, id, cmd, "ffmpeg", &label, seconds, Some(&out)).await {
+            // A stopped split leaves no loose parts behind.
+            if e == STOPPED_MSG {
+                for done in &outs {
+                    let _ = tokio::fs::remove_file(done).await;
+                }
+            }
+            return Err(e);
+        }
         outs.push(out.to_string_lossy().to_string());
     }
     Ok(outs)
@@ -371,29 +473,30 @@ async fn split(
 /// 1. ffmpeg turns the input into a 48 kHz wav, which is what deep-filter reads.
 /// 2. deep-filter cleans it.
 /// 3. ffmpeg writes the result back in the input's format.
+/// The caller deletes `work` afterwards, even when a step fails or is stopped.
+#[allow(clippy::too_many_arguments)]
 async fn denoise(
     app: &AppHandle,
     id: &str,
     input: &Path,
+    work: &Path,
     out_dir: &Path,
     pattern: &str,
     stem: &str,
     ext: &str,
     strength: u8,
+    length: Option<f64>,
 ) -> Result<String, String> {
-    let work = std::env::temp_dir().join("ampliflare").join(id);
     let df_out = work.join("out");
     tokio::fs::create_dir_all(&df_out).await.map_err(|e| format!("Cannot create temp folder: {e}"))?;
     let wav_in = work.join("in.wav");
     let wav_clean = df_out.join("in.wav");
 
-    report(app, id, "Preparing audio");
     let cmd = ffmpeg(app)?
         .args(["-i", &input.to_string_lossy(), "-ar", "48000", "-c:a", "pcm_s16le"])
         .arg(&wav_in);
-    run(cmd, "ffmpeg").await?;
+    run(app, id, cmd, "ffmpeg", "Preparing audio", length, None).await?;
 
-    report(app, id, "Removing noise");
     // deep-filter's limit is in dB. 100 means take out as much noise as it can.
     let atten = strength.min(100).to_string();
     let cmd = app
@@ -403,24 +506,25 @@ async fn denoise(
         .args(["-D", "-a", &atten, "-o"])
         .arg(&df_out)
         .arg(&wav_in);
-    run(cmd, "deep-filter").await?;
+    run(app, id, cmd, "deep-filter", "Removing noise", None, None).await?;
     if !wav_clean.is_file() {
         return Err("deep-filter did not write an output file".into());
     }
 
-    report(app, id, "Saving");
     let out = output_path(out_dir, pattern, stem, "clean", None, ext);
     if ext == "wav" {
+        if is_stopped(id) {
+            return Err(STOPPED_MSG.into());
+        }
+        report(app, id, "Saving", None);
         tokio::fs::copy(&wav_clean, &out).await.map_err(|e| format!("Cannot save output: {e}"))?;
     } else {
         let cmd = ffmpeg(app)?
             .args(["-i", &wav_clean.to_string_lossy()])
             .args(encode_args(ext, None))
             .arg(&out);
-        run(cmd, "ffmpeg").await?;
+        run(app, id, cmd, "ffmpeg", "Saving", length, Some(&out)).await?;
     }
-
-    let _ = tokio::fs::remove_dir_all(&work).await;
     Ok(out.to_string_lossy().to_string())
 }
 

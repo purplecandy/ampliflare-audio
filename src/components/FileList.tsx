@@ -11,6 +11,7 @@ interface Props {
   busy: boolean;
   onSelect: (id: string) => void;
   onRemove: (id: string) => void;
+  onStop: (id: string) => void;
 }
 
 const LABEL: Record<QueuedFile["status"], string> = {
@@ -28,14 +29,14 @@ const ICON: Record<QueuedFile["status"], IconName> = {
 };
 
 function statusText(f: QueuedFile): string {
-  if (f.status === "running" && f.step) return `${f.step}…`;
+  if (f.status === "running" && f.step) return f.percent != null ? `${f.step}… ${f.percent}%` : `${f.step}…`;
   if (f.status === "error" && f.error) return `Failed: ${f.error}`;
   if (f.status === "done" && f.outputs && f.outputs.length > 1) return `Saved ${f.outputs.length} files`;
   if (f.status === "done" && f.outputs?.[0]) return `Saved as ${f.outputs[0].split(/[\\/]/).pop()}`;
   return LABEL[f.status];
 }
 
-export function FileList({ files, selectedId, selectable, busy, onSelect, onRemove }: Props) {
+export function FileList({ files, selectedId, selectable, busy, onSelect, onRemove, onStop }: Props) {
   const player = useAudioPlayer();
 
   // Stop when the playing file leaves the list.
@@ -76,6 +77,10 @@ export function FileList({ files, selectedId, selectable, busy, onSelect, onRemo
                   {f.name}
                 </span>
                 <span className={`row-subtitle ${f.status === "error" ? "status-error" : ""}`}>{statusText(f)}</span>
+                {f.status === "running" && (
+                  // No value means we can't tell how long it will take, so the bar just moves.
+                  <progress className="row-progress" value={f.percent} max={100} />
+                )}
               </div>
               <Player player={player} id={f.id} path={f.path} />
               <div className="row-actions">
@@ -90,6 +95,20 @@ export function FileList({ files, selectedId, selectable, busy, onSelect, onRemo
                   >
                     <Icon name="open" />
                     Show
+                  </button>
+                )}
+                {f.status === "running" && (
+                  <button
+                    type="button"
+                    className="flat circular"
+                    aria-label="Stop this file"
+                    title="Stop this file"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onStop(f.id);
+                    }}
+                  >
+                    <Icon name="stop" />
                   </button>
                 )}
                 {!busy && (
