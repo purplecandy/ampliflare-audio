@@ -18,6 +18,7 @@ export interface QueuedFile {
   name: string;
   status: FileStatus;
   step?: string;
+  percent?: number;
   outputs?: string[];
   error?: string;
 }
@@ -45,6 +46,8 @@ export interface Tools {
 export interface Progress {
   id: string;
   step: string;
+  /** 0 to 100, when the step's length is known. */
+  percent: number | null;
 }
 
 /** Matches the Analysis struct in src-tauri/src/analyze.rs */

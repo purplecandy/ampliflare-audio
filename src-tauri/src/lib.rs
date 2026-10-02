@@ -23,6 +23,7 @@ pub fn run() {
             jobs::files_exist,
             jobs::read_audio,
             jobs::run_job,
+            jobs::stop_job,
             jobs::dev_start,
             analyze::analyze_audio,
             license::license_status,

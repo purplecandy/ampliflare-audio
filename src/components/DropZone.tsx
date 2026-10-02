@@ -23,7 +23,8 @@ export function DropZone({ active, onPick, compact }: Props) {
       <h2>Drop audio files here</h2>
       <p>Everything runs on this computer. Nothing leaves your machine. wav, mp3, m4a, flac, ogg and more.</p>
       <button type="button" className="suggested pill" onClick={onPick}>
-        Open Files…
+        <Icon name="folder" />
+        Open Files
       </button>
     </div>
   );

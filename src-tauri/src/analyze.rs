@@ -137,7 +137,7 @@ fn analyze(input: &Path) -> Result<Analysis, String> {
 }
 
 /// Ask ffmpeg about the file and read the "Duration: 00:05:00.00" line it prints.
-fn duration_seconds(ffmpeg: &str, input: &Path) -> Result<f64, String> {
+pub(crate) fn duration_seconds(ffmpeg: &str, input: &Path) -> Result<f64, String> {
     let out = Command::new(ffmpeg)
         .args(["-nostdin", "-hide_banner", "-i"])
         .arg(input)

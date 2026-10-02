@@ -678,3 +678,9 @@ button.token {
 .sheet .row-player {
   flex-basis: 11rem;
 }
+
+/* Progress under a file that is being worked on */
+.row-progress {
+  height: 4px;
+  margin: 0.3rem 0 0;
+}
