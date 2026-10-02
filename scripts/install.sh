@@ -84,7 +84,7 @@ warn_dependencies() {
 }
 
 main() {
-  local system=0 uninstall=0 version='' repo arch asset base marker
+  local system=0 uninstall=0 version='' downloads arch asset base marker
   local app_dir appimage link icon desktop bin_dir
   TEMP_DIR=''
 
@@ -146,9 +146,11 @@ main() {
     return 0
   fi
 
-  repo=${AMPLIFLARE_REPO:-purplecandy/ampliflare-audio}
-  if [[ ! "$repo" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
-    die 'AMPLIFLARE_REPO must be an owner/repo name.'
+  # Releases are copied here by .github/workflows/release.yml, in the same paths GitHub uses.
+  downloads=${AMPLIFLARE_DOWNLOADS:-https://static.purplecandy.dev/ampliflare-audio}
+  downloads=${downloads%/}
+  if [[ ! "$downloads" =~ ^https://[A-Za-z0-9._/-]+$ ]]; then
+    die 'AMPLIFLARE_DOWNLOADS must be an https address.'
   fi
   case "$(uname -m)" in
     x86_64|amd64) arch=x86_64 ;;
@@ -179,7 +181,7 @@ main() {
   trap 'exit 1' HUP INT TERM
 
   if [ -z "$version" ]; then
-    download "https://github.com/$repo/releases/latest/download/latest.json" "$TEMP_DIR/latest.json"
+    download "$downloads/releases/latest/download/latest.json" "$TEMP_DIR/latest.json"
     version=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$TEMP_DIR/latest.json" | head -n 1)
   fi
   case "$version" in
@@ -191,7 +193,7 @@ main() {
   esac
 
   asset="Ampliflare-Audio_${version}_linux_${arch}.AppImage"
-  base="https://github.com/$repo/releases/download/v$version"
+  base="$downloads/releases/download/v$version"
   download "$base/SHA256SUMS" "$TEMP_DIR/SHA256SUMS"
   download "$base/$asset" "$TEMP_DIR/$asset"
   download "$base/icon.png" "$TEMP_DIR/icon.png"

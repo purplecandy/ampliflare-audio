@@ -67,7 +67,7 @@ release with an in-app updater feed. See [docs/releasing.md](docs/releasing.md).
 ## Install on Linux
 
 ```sh
-curl -fsSL https://github.com/purplecandy/ampliflare-audio/releases/latest/download/install.sh | bash
+curl -fsSL https://static.purplecandy.dev/ampliflare-audio/releases/latest/download/install.sh | bash
 ```
 
 ## Not done yet
