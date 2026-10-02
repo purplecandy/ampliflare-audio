@@ -28,3 +28,7 @@ Heavy work runs in sidecar binaries: `deep-filter` for noise reduction and
   `AMPLIFLARE_DEV_FILES=/a.wav:/b.mp3` and `AMPLIFLARE_DEV_ACTION=cut`.
   `AMPLIFLARE_DEV_LOOK=mac/dark/blue` sets the style, colours and accent.
   These only work in debug builds.
+- Only CI builds set `AMPLIFLARE_OFFICIAL_BUILD`, which turns on the weekly
+  limit and the license key. Any other build is a source build, free for any
+  use. Set it by hand, like `AMPLIFLARE_OFFICIAL_BUILD=1 pnpm tauri dev`, to
+  try the limit.

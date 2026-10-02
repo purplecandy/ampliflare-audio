@@ -36,14 +36,38 @@ export function LicenseMenu({ status, onStatus }: Props) {
       <button type="button" className="row" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
         <Icon name="key" />
         <span className="row-text">
-          <span className="row-title">{status.licensed ? "Commercial license" : "Personal use"}</span>
+          <span className="row-title">{title(status)}</span>
           <span className="row-subtitle">
-            {status.licensed ? `Key ending ${status.key_end}` : `${left} of ${status.limit} files left this week`}
+            {status.source_build
+              ? "Free for any use"
+              : status.licensed
+                ? `Key ending ${status.key_end}`
+                : `${left} of ${status.limit} files left this week`}
           </span>
         </span>
       </button>
       <Popover open={open} onClose={() => setOpen(false)} label="License" className="license">
-        {status.licensed ? (
+        {status.source_build ? (
+          <>
+            <p className="section-label">Built from source</p>
+            <p>
+              This copy was built from the AGPL source code, so it is free for any use, work included, with no weekly
+              limit and no key.
+            </p>
+            <p>
+              A license pays for the work and gets you the signed app with updates.{" "}
+              <a
+                href={BUY_URL}
+                onClick={(e) => {
+                  e.preventDefault();
+                  openBuyPage();
+                }}
+              >
+                Buy a license
+              </a>
+            </p>
+          </>
+        ) : status.licensed ? (
           <>
             <p className="section-label">Commercial license</p>
             <p>You can use Ampliflare Audio for work, with no weekly limit. Thank you for supporting it.</p>
@@ -106,4 +130,9 @@ export function LicenseMenu({ status, onStatus }: Props) {
       </Popover>
     </div>
   );
+}
+
+function title(s: LicenseStatus): string {
+  if (s.source_build) return "Built from source";
+  return s.licensed ? "Commercial license" : "Personal use";
 }

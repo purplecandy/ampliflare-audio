@@ -7,6 +7,9 @@
 //! stays when the app is removed. Reading merges the two copies so that
 //! deleting one does not reset the week. Someone who deletes both can reset
 //! it, so this is a nudge, not a lock.
+//!
+//! All of this is for the prebuilt binaries only. The source is AGPL and free
+//! for any use, so a build made from it has no limit and asks for no key.
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -20,6 +23,11 @@ use tauri::{AppHandle, Manager};
 pub const FREE_WEEKLY_FILES: u32 = 20;
 
 const WEEK: u64 = 7 * 24 * 60 * 60;
+
+/// True only in the binaries the project's own CI builds, which set
+/// AMPLIFLARE_OFFICIAL_BUILD (see .github/workflows/build.yml). Every other
+/// build is a source build. Set it by hand to try the limit while developing.
+const OFFICIAL_BUILD: bool = option_env!("AMPLIFLARE_OFFICIAL_BUILD").is_some();
 
 /// Ampliflare's product on Dodo. Release builds refuse a key bought for a
 /// different product. Test mode has its own product ids, so debug builds skip it.
@@ -59,6 +67,8 @@ struct Saved {
 /// What the window shows.
 #[derive(Debug, Clone, Serialize)]
 pub struct Status {
+    /// Built from source rather than downloaded: no limit and no key.
+    pub source_build: bool,
     pub licensed: bool,
     /// The last four characters of the key, to tell keys apart.
     pub key_end: Option<String>,
@@ -95,8 +105,13 @@ fn merge(a: Saved, b: Saved) -> Saved {
 }
 
 fn status_of(s: &Saved) -> Status {
+    status_for(s, OFFICIAL_BUILD)
+}
+
+fn status_for(s: &Saved, official: bool) -> Status {
     let week = this_week(s.usage, now());
     Status {
+        source_build: !official,
         licensed: s.license.is_some(),
         key_end: s.license.as_ref().map(|l| l.key.chars().rev().take(4).collect::<Vec<_>>().into_iter().rev().collect()),
         used: week.used,
@@ -183,7 +198,7 @@ fn update(app: &AppHandle, change: impl FnOnce(&mut Saved)) -> Saved {
 pub fn check_quota(app: &AppHandle) -> Result<(), String> {
     let s = load(app);
     let st = status_of(&s);
-    if st.licensed || st.used < st.limit {
+    if st.source_build || st.licensed || st.used < st.limit {
         return Ok(());
     }
     Err(format!(
@@ -192,8 +207,11 @@ pub fn check_quota(app: &AppHandle) -> Result<(), String> {
     ))
 }
 
-/// Count one finished file. Licensed use is not counted.
+/// Count one finished file. Licensed use and source builds are not counted.
 pub fn count_file(app: &AppHandle) {
+    if !OFFICIAL_BUILD {
+        return;
+    }
     update(app, |s| {
         if s.license.is_some() {
             return;
@@ -361,6 +379,13 @@ mod tests {
         assert!(st.licensed);
         assert_eq!(st.key_end.as_deref(), Some("WXYZ"));
         assert_eq!(st.resets_at, None);
+    }
+
+    #[test]
+    fn only_official_builds_have_the_limit() {
+        let s = Saved { usage: Usage { week_start: now(), used: FREE_WEEKLY_FILES }, license: None };
+        assert!(status_for(&s, false).source_build);
+        assert!(!status_for(&s, true).source_build);
     }
 }
 

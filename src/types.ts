@@ -27,6 +27,8 @@ export type SaveTo = { kind: "source" } | { kind: "folder"; path: string };
 
 /** Matches the Status struct in src-tauri/src/license.rs */
 export interface LicenseStatus {
+  /** Built from source: free for any use, with no limit and no key. */
+  source_build: boolean;
   licensed: boolean;
   key_end: string | null;
   used: number;

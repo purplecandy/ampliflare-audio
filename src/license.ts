@@ -16,7 +16,7 @@ export function filesLeft(s: LicenseStatus): number {
 }
 
 export function limitReached(s: LicenseStatus | null): boolean {
-  return !!s && !s.licensed && s.used >= s.limit;
+  return !!s && !s.source_build && !s.licensed && s.used >= s.limit;
 }
 
 /** Like "Monday, Oct 6", or null before the week's first file. */

@@ -31,6 +31,9 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  # Marks these as the prebuilt binaries, which have the weekly limit and take
+  # a license key. A build from source does not set it and has neither.
+  AMPLIFLARE_OFFICIAL_BUILD: "1"
 
 jobs:
   test:
