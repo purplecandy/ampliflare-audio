@@ -327,36 +327,71 @@ button.dropstrip.active {
 .field input {
   width: 6.5rem;
 }
-.split-row {
-  display: flex;
-  flex: 1;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem;
+/* Split: the button that rides on the playhead, and the list of parts */
+.spectrogram {
+  position: relative;
 }
-.chips {
+.spectrogram canvas:focus-visible {
+  outline: 2px solid var(--adw-focus);
+  outline-offset: 2px;
+}
+button.split-here {
+  position: absolute;
+  top: 1.1rem;
+  min-height: 1.75rem;
+  padding: 0.15rem 0.65rem;
+  font-size: 0.85em;
+  transform: translateX(-50%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+.split-evenly {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 0.4rem;
+  margin: 0 0 0 auto;
+  font-size: 0.9em;
+  color: var(--adw-dim-fg);
 }
-.chip {
-  display: inline-flex;
+.split-evenly input {
+  width: 4rem;
+}
+.split-evenly :is(label, span) {
+  white-space: nowrap;
+}
+.parts button.flat:not(.circular) {
+  min-height: 1.75rem;
+  padding: 0.1rem 0.6rem;
+  font-size: 0.9em;
+  font-weight: 400;
+  color: var(--adw-dim-fg);
+}
+.parts {
+  margin: 0.25rem 0 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+.parts li {
+  display: flex;
   align-items: center;
-  gap: 0.2rem;
-  padding: 0.15rem 0.25rem 0.15rem 0.7rem;
-  background: var(--adw-shade);
-  border-radius: 999px;
-  font-size: 0.85em;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0.2rem 0;
+  border-top: 1px solid var(--adw-border);
   font-variant-numeric: tabular-nums;
 }
-.chip button {
-  width: 1.5rem;
-  min-height: 1.5rem;
+.parts li:first-child {
+  border-top: 0;
 }
-.chip button .icon {
-  width: 12px;
-  height: 12px;
+.part-name {
+  min-width: 4rem;
+  font-weight: 600;
+}
+.part-time,
+.part-length {
+  color: var(--adw-dim-fg);
+}
+.part-length {
+  flex: 1;
 }
 .hint {
   display: block;
@@ -537,3 +572,4 @@ button.token {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.9em;
 }
+

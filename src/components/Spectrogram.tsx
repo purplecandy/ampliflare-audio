@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Icon } from "./Icon";
 import { fmtTime, type Analysis } from "../types";
 
 interface Props {
@@ -10,12 +11,18 @@ interface Props {
   onRange: (r: { start: number; end: number }) => void;
   onMarkers: (m: number[]) => void;
   onSeek: (t: number) => void;
+  /** Split mode: add a split at this time. Drawn as a "Split here" button on the playhead. */
+  onSplit?: (t: number) => void;
+  /** Split mode: false when the playhead sits on a split or an end, so the button hides. */
+  canSplit?: boolean;
+  disabled?: boolean;
 }
 
 const HEIGHT = 240;
 const WAVE_H = 36;
 const RULER_H = 18;
-const GRAB_PX = 8;
+const GRAB_PX = 10;
+const HANDLE_R = 6;
 const MIN_GAP = 0.1;
 
 /** Dark purple through orange to pale yellow, like the magma map. */
@@ -53,11 +60,14 @@ function tickStep(duration: number, width: number): number {
   return 3600;
 }
 
-export function Spectrogram({ analysis, mode, range, markers, playhead, onRange, onMarkers, onSeek }: Props) {
+export function Spectrogram(props: Props) {
+  const { analysis, mode, range, markers, playhead, onRange, onMarkers, onSeek, onSplit, canSplit, disabled } = props;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dragRef = useRef<{ kind: "start" | "end" | "marker"; index: number } | null>(null);
   const [cursor, setCursor] = useState("pointer");
   const [width, setWidth] = useState(0);
+  // Where the mouse is, in seconds, so a guide line shows where a click lands.
+  const [hover, setHover] = useState<number | null>(null);
 
   // The picture itself is drawn once into an offscreen canvas at one pixel per step and band.
   const image = useMemo(() => {
@@ -108,7 +118,6 @@ export function Spectrogram({ analysis, mode, range, markers, playhead, onRange,
     const specH = HEIGHT - WAVE_H - RULER_H;
     const style = getComputedStyle(canvas);
     const accent = style.getPropertyValue("--pico-primary").trim() || "#7c6cff";
-    const fg = style.getPropertyValue("--pico-color").trim() || "#ddd";
     const muted = style.getPropertyValue("--pico-muted-color").trim() || "#888";
 
     // Spectrogram
@@ -155,26 +164,66 @@ export function Spectrogram({ analysis, mode, range, markers, playhead, onRange,
         ctx.fillRect(x - 5, 0, 10, 14);
       }
     } else {
-      markers.forEach((t, i) => {
+      // Every other part is lifted a little, and each one is numbered, so the
+      // picture shows the files that will come out.
+      const edges = [0, ...markers, duration];
+      for (let i = 0; i < edges.length - 1; i++) {
+        const x0 = toX(edges[i]);
+        const x1 = toX(edges[i + 1]);
+        if (i % 2 === 1) {
+          ctx.fillStyle = "rgba(255,255,255,0.10)";
+          ctx.fillRect(x0, 0, x1 - x0, rulerTop);
+        }
+        if (markers.length > 0 && x1 - x0 > 22) {
+          ctx.fillStyle = "rgba(0,0,0,0.55)";
+          ctx.fillRect(x0 + 4, specH - 22, 18, 16);
+          ctx.fillStyle = "#fff";
+          ctx.font = "bold 11px system-ui, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(String(i + 1), x0 + 13, specH - 20);
+          ctx.textAlign = "start";
+        }
+      }
+      for (const t of markers) {
         const x = Math.round(toX(t));
         ctx.fillStyle = accent;
         ctx.fillRect(x - 1, 0, 2, rulerTop);
+        // A round handle at the top says the line can be dragged.
         ctx.beginPath();
-        ctx.moveTo(x - 7, 0);
-        ctx.lineTo(x + 7, 0);
-        ctx.lineTo(x, 10);
+        ctx.arc(x, HANDLE_R + 2, HANDLE_R, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = fg;
-        ctx.font = "bold 10px system-ui, sans-serif";
-        ctx.fillText(String(i + 1), x + 5, 12);
-      });
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+    }
+
+    // Hover guide
+    if (hover !== null && !dragRef.current) {
+      const hx = Math.round(toX(hover)) + 0.5;
+      ctx.strokeStyle = "rgba(255,255,255,0.6)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(hx, 0);
+      ctx.lineTo(hx, rulerTop);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const label = fmtTime(hover);
+      ctx.font = "11px system-ui, sans-serif";
+      const w = ctx.measureText(label).width + 8;
+      const lx = Math.min(Math.max(hx - w / 2, 0), width - w);
+      ctx.fillStyle = "rgba(0,0,0,0.7)";
+      ctx.fillRect(lx, rulerTop - 18, w, 16);
+      ctx.fillStyle = "#fff";
+      ctx.fillText(label, lx + 4, rulerTop - 16);
     }
 
     // Playhead
     const px = Math.round(toX(playhead));
     ctx.fillStyle = "rgba(255,255,255,0.9)";
     ctx.fillRect(px, 0, 1, rulerTop);
-  }, [image, width, mode, range, markers, playhead, duration, analysis.peaks]);
+  }, [image, width, mode, range, markers, playhead, duration, analysis.peaks, hover]);
 
   function hit(x: number): { kind: "start" | "end" | "marker"; index: number } | null {
     if (mode === "cut") {
@@ -214,7 +263,9 @@ export function Spectrogram({ analysis, mode, range, markers, playhead, onRange,
     const x = localX(e);
     const drag = dragRef.current;
     if (!drag) {
-      setCursor(hit(x) ? "col-resize" : "pointer");
+      const grabbing = hit(x);
+      setCursor(grabbing ? "col-resize" : "pointer");
+      setHover(grabbing ? null : toT(x));
       return;
     }
     const t = toT(x);
@@ -247,12 +298,28 @@ export function Spectrogram({ analysis, mode, range, markers, playhead, onRange,
       <canvas
         ref={canvasRef}
         style={{ height: HEIGHT, cursor }}
+        tabIndex={0}
+        aria-label={mode === "split" ? "Sound picture. Space plays, S splits, arrow keys move the playhead." : "Sound picture. Space plays, arrow keys move the playhead."}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
+        onPointerLeave={() => setHover(null)}
         onDoubleClick={onDoubleClick}
       />
+      {mode === "split" && onSplit && canSplit && width > 0 && (
+        <button
+          type="button"
+          className="split-here suggested"
+          style={{ left: Math.min(Math.max(toX(playhead), 48), width - 48) }}
+          disabled={disabled}
+          onClick={() => onSplit(playhead)}
+          title="Split at the playhead (S)"
+        >
+          <Icon name="cut" />
+          Split here
+        </button>
+      )}
     </div>
   );
 }
