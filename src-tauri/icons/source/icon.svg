@@ -1,32 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <!-- Apple app icon template: 824 tile centered on 1024, corner radius 185, soft shadow. -->
+  <!-- Apple app icon template: 824 tile centered on 1024, corner radius 185, soft shadow.
+       The art inside is the logo from site/src/images/mark.svg (DiceBear "Waves", CC0). -->
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#FF8A3D"/>
-      <stop offset="0.55" stop-color="#F0435A"/>
-      <stop offset="1" stop-color="#6D28D9"/>
-    </linearGradient>
-    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.35"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
-    </radialGradient>
     <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%">
       <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000000" flood-opacity="0.30"/>
     </filter>
+    <clipPath id="tile">
+      <rect x="100" y="100" width="824" height="824" rx="185"/>
+    </clipPath>
   </defs>
-  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)" filter="url(#shadow)"/>
-  <circle cx="512" cy="512" r="300" fill="url(#glow)"/>
-  <g fill="#FFFFFF">
-    <rect x="182" y="452" width="40" height="120" rx="20"/>
-    <rect x="244" y="402" width="40" height="220" rx="20"/>
-    <rect x="306" y="347" width="40" height="330" rx="20"/>
-    <rect x="368" y="387" width="40" height="250" rx="20"/>
-    <rect x="430" y="302" width="40" height="420" rx="20"/>
-    <rect x="492" y="232" width="40" height="560" rx="20"/>
-    <rect x="554" y="302" width="40" height="420" rx="20"/>
-    <rect x="616" y="387" width="40" height="250" rx="20"/>
-    <rect x="678" y="347" width="40" height="330" rx="20"/>
-    <rect x="740" y="402" width="40" height="220" rx="20"/>
-    <rect x="802" y="452" width="40" height="120" rx="20"/>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#7cff00" filter="url(#shadow)"/>
+  <g clip-path="url(#tile)">
+    <svg x="100" y="100" width="824" height="824" viewBox="0 0 100 100" fill="none"><metadata xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/"><rdf:RDF><rdf:Description><dc:title>Waves</dc:title><dc:creator>DiceBear</dc:creator><dc:source xsi:type="dcterms:URI">https://www.dicebear.com</dc:source><dcterms:license xsi:type="dcterms:URI">https://creativecommons.org/publicdomain/zero/1.0/</dcterms:license><dc:rights>“Waves” (https://www.dicebear.com) by “DiceBear”, licensed under “CC0 1.0” (https://creativecommons.org/publicdomain/zero/1.0/)</dc:rights></rdf:Description></rdf:RDF></metadata><defs><g id="layer-swell-340f91dc"><path d="M0 24C25 24 35 0 62 0c22 0 34 20 56 22 18 1 30-10 48-10 12 0 24 6 34 8v110H0Z" fill="#000000"/></g><g id="layer-surge-340f91dc"><path d="M0 6c24 0 44 4 62 14 16 8 34 8 52 2 20-7 38-12 54-12 12 0 24 4 32 6v114H0Z" fill="#000000"/></g><g id="body-trio-340f91dc"><g opacity=".2"><g class="dbwa-l1"><use transform="translate(-50 8) translate(-21.408, -3.63649)" href="#layer-swell-340f91dc"/></g></g><g opacity=".35"><g class="dbwa-l2"><use transform="translate(-50 32) translate(9.372, -2.76497)" href="#layer-surge-340f91dc"/></g></g><g opacity=".5"><g class="dbwa-l3"><use transform="translate(-50 56) translate(5.0418, 4.33784)" href="#layer-surge-340f91dc"/></g></g></g><g id="bodyFree-default-340f91dc"><use href="#body-trio-340f91dc"/></g><g id="rotation-free-340f91dc"><use transform="rotate(-24.6884, 50, 50)" href="#bodyFree-default-340f91dc"/></g><g id="animation-none-340f91dc"></g><clipPath id="clip-340f91dc"><rect width="100" height="100" rx="0" ry="0"/></clipPath></defs><g clip-path="url(#clip-340f91dc)"><rect width="100" height="100" fill="#7cff00"/><use href="#rotation-free-340f91dc"/><use href="#animation-none-340f91dc"/></g></svg>
   </g>
 </svg>
