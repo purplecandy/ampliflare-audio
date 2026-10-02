@@ -1,16 +1,14 @@
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { SITE_URL, openLink } from "./links";
 import type { LicenseStatus } from "./types";
 
 /* The limit and the license are kept and enforced in src-tauri/src/license.rs.
    This file only has what the window needs to talk about them. */
 
-// TODO: point this at the site's buy box (site/ SITE_URL + "/#buy") once the
-// site has an address, so people can pick their price. Until then it opens
-// the checkout at the suggested $40.
-export const BUY_URL = "https://checkout.dodopayments.com/buy/pdt_0NobndRz8QFm6LfKHxgdr?paymentAmount=40";
+// The site's "Pay what you can" box, so people pick their own price.
+export const BUY_URL = `${SITE_URL}/#buy`;
 
 export function openBuyPage() {
-  void openUrl(BUY_URL).catch(console.warn);
+  openLink(BUY_URL);
 }
 
 export function filesLeft(s: LicenseStatus): number {

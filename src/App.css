@@ -573,3 +573,23 @@ button.token {
   font-size: 0.9em;
 }
 
+/* Help menu: one link per row */
+.popover.help nav {
+  display: flex;
+  flex-direction: column;
+}
+.popover.help nav a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--adw-radius);
+  color: inherit;
+  text-decoration: none;
+}
+.popover.help nav a:hover {
+  background: var(--adw-shade);
+}
+.popover.help nav a .icon {
+  color: var(--adw-dim-fg);
+}
