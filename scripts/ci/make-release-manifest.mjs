@@ -1,27 +1,35 @@
 #!/usr/bin/env node
-// Writes latest.json for the Tauri updater and SHA256SUMS for every file in a folder.
+// Writes three files into a folder of finished builds:
+//   latest.json   for the Tauri updater
+//   SHA256SUMS    a checksum for every file
+//   release.json  the file list for the site's Download dialog
 // Run it after all platform builds are gathered into one folder.
 //
-//   node scripts/ci/make-release-manifest.mjs <dir> <owner/repo> [notes-file]
+//   node scripts/ci/make-release-manifest.mjs <dir> <downloads root> [notes-file]
 //
-// latest.json points at https://github.com/<repo>/releases/download/v<version>/<file>.
-// Keys follow the updater's lookup order: "{os}-{arch}-{installer}" first, then "{os}-{arch}".
+// The downloads root is where release.yml copies the files, like
+// https://static.purplecandy.dev/ampliflare-audio. Files are linked as
+// <root>/releases/download/v<version>/<file>, the same paths GitHub uses.
+// latest.json keys follow the updater's lookup order: "{os}-{arch}-{installer}"
+// first, then "{os}-{arch}".
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const [dir, repo, notesFile] = process.argv.slice(2);
-if (!dir || !repo) {
-  console.error("usage: make-release-manifest.mjs <dir> <owner/repo> [notes-file]");
+const [dir, root, notesFile] = process.argv.slice(2);
+if (!dir || !root?.startsWith("https://")) {
+  console.error("usage: make-release-manifest.mjs <dir> <https downloads root> [notes-file]");
   process.exit(2);
 }
 
-const root = fileURLToPath(new URL("../..", import.meta.url));
-const conf = JSON.parse(readFileSync(join(root, "src-tauri/tauri.conf.json"), "utf8"));
+const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
+const conf = JSON.parse(readFileSync(join(repoRoot, "src-tauri/tauri.conf.json"), "utf8"));
 const version = conf.version;
 const stem = `${conf.productName.replaceAll(" ", "-")}_${version}`;
-const base = `https://github.com/${repo}/releases/download/v${version}`;
+const base = `${root.replace(/\/+$/, "")}/releases/download/v${version}`;
+const notes = notesFile && existsSync(notesFile) ? readFileSync(notesFile, "utf8").trim() : "";
+const published = new Date().toISOString();
 
 // [file suffix, updater os, installer name, is the default for "{os}-{arch}"]
 const kinds = [
@@ -58,12 +66,7 @@ if (Object.keys(platforms).length === 0) {
   process.exit(1);
 }
 
-const manifest = {
-  version,
-  notes: notesFile && existsSync(notesFile) ? readFileSync(notesFile, "utf8").trim() : "",
-  pub_date: new Date().toISOString(),
-  platforms,
-};
+const manifest = { version, notes, pub_date: published, platforms };
 writeFileSync(join(dir, "latest.json"), JSON.stringify(manifest, null, 2) + "\n");
 console.log(`latest.json: ${Object.keys(platforms).sort().join(", ")}`);
 
@@ -73,3 +76,24 @@ const sums = readdirSync(dir)
   .map((f) => `${createHash("sha256").update(readFileSync(join(dir, f))).digest("hex")}  ${f}`);
 writeFileSync(join(dir, "SHA256SUMS"), sums.join("\n") + "\n");
 console.log(`SHA256SUMS: ${sums.length} files`);
+
+// In the shape of GitHub's "latest release" answer, which is what the site's
+// Download dialog was written against. html_url is where it sends people for
+// checksums.
+const assets = readdirSync(dir)
+  .filter((f) => f !== "release.json" && statSync(join(dir, f)).isFile())
+  .sort()
+  .map((name) => ({
+    name,
+    size: statSync(join(dir, name)).size,
+    browser_download_url: `${base}/${encodeURIComponent(name)}`,
+  }));
+const release = {
+  tag_name: `v${version}`,
+  html_url: `${base}/SHA256SUMS`,
+  published_at: published,
+  body: notes,
+  assets,
+};
+writeFileSync(join(dir, "release.json"), JSON.stringify(release, null, 2) + "\n");
+console.log(`release.json: ${assets.length} files`);

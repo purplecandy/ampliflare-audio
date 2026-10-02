@@ -6,7 +6,21 @@ Two workflows do the work.
   It builds for macOS (arm64 and x64), Windows x64 and Linux (x64 and arm64), and
   uploads the packages as workflow artifacts.
 - `.github/workflows/release.yml` runs when a `v*` tag is pushed. It runs the same
-  build with signing required, then publishes a GitHub release.
+  build with signing required, copies the files to Cloudflare R2, then publishes a
+  GitHub release.
+
+## Where releases live
+
+The GitHub repo is private, so people download from a public copy in the R2
+bucket `static`, served at `https://static.purplecandy.dev/ampliflare-audio/`.
+It uses the same paths as GitHub:
+
+- `releases/download/v1.0.0/<file>`, every release, never changed after.
+- `releases/latest/download/<file>`, the newest full release. Pre-releases are not copied here.
+
+The in-app updater reads `releases/latest/download/latest.json`, `install.sh`
+reads the same folder, and the site's Download dialog reads `release.json` there.
+The updater address is built into every installed app, so this path must never move.
 
 ## What each platform gets
 
@@ -35,7 +49,14 @@ gh secret set MACOS_NOTARY_KEY_ID -R $R            # the 10 character key id
 gh secret set MACOS_NOTARY_ISSUER -R $R            # the issuer id above the keys table
 gh secret set TAURI_SIGNING_PRIVATE_KEY -R $R < ~/.tauri/ampliflare-audio/updater.key
 gh secret set TAURI_SIGNING_PRIVATE_KEY_PASSWORD -R $R < ~/.tauri/ampliflare-audio/updater.key.password
+gh secret set R2_ACCOUNT_ID -R $R                 # the Cloudflare account id
+gh secret set R2_ACCESS_KEY_ID -R $R              # prompts
+gh secret set R2_SECRET_ACCESS_KEY -R $R          # prompts
 ```
+
+For the R2 keys, make an R2 API token in the Cloudflare dashboard with
+**Object Read & Write** on the `static` bucket only. Its S3 access key id and
+secret go in the last two secrets.
 
 The updater key pair lives in `~/.tauri/ampliflare-audio/`. The public half is in
 `src-tauri/tauri.conf.json` under `plugins.updater.pubkey`. Back up the private key.
@@ -85,7 +106,7 @@ Both `spctl` lines should say `source=Notarized Developer ID`.
 ## Linux install
 
 ```sh
-curl -fsSL https://github.com/purplecandy/ampliflare-audio/releases/latest/download/install.sh | bash
+curl -fsSL https://static.purplecandy.dev/ampliflare-audio/releases/latest/download/install.sh | bash
 ```
 
 It installs the AppImage into `~/.local/share/ampliflare-audio`, adds a menu entry,

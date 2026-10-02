@@ -1,8 +1,15 @@
 # Pushing a tag like v0.2.0 builds every platform, signed and notarized,
-# and publishes a GitHub release with latest.json for the in-app updater.
-# A tag with a dash, like v0.2.0-beta.1, becomes a pre-release. The updater
-# only follows the latest full release, so pre-releases never reach users by themselves.
+# copies the files to https://static.purplecandy.dev/ampliflare-audio/ and
+# publishes a GitHub release with the same files.
+# The public copy is what people use: the in-app updater, install.sh and the
+# site's Download button all read it, since the GitHub repo is private.
+# A tag with a dash, like v0.2.0-beta.1, becomes a pre-release. It is copied
+# under its version only, and the updater only follows the latest full release,
+# so pre-releases never reach users by themselves.
 # The tag must equal "v" plus the version in package.json, Cargo.toml and tauri.conf.json.
+#
+# Copying needs an R2 API token for the "static" bucket, in these secrets:
+#   R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY
 name: Release
 
 on:
@@ -43,6 +50,9 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       TAG: ${{ github.ref_name }}
+      DOWNLOADS: https://static.purplecandy.dev/ampliflare-audio
+      # Bucket and folder behind DOWNLOADS.
+      R2_PREFIX: s3://static/ampliflare-audio/releases
     steps:
       - uses: actions/checkout@v4
         with:
@@ -70,7 +80,7 @@ jobs:
           cp scripts/install.sh dist/install.sh
           cp src-tauri/icons/icon.png dist/icon.png
           rm -f dist/*.sha256
-          node scripts/ci/make-release-manifest.mjs dist "$GITHUB_REPOSITORY" "$RUNNER_TEMP/notes.md"
+          node scripts/ci/make-release-manifest.mjs dist "$DOWNLOADS" "$RUNNER_TEMP/notes.md"
           cat dist/latest.json
           # Every platform must be able to update, or the release stops here.
           for p in darwin-aarch64 darwin-x86_64 windows-x86_64 linux-x86_64 linux-aarch64; do
@@ -78,6 +88,39 @@ jobs:
               || { echo "::error::latest.json has no signed build for $p"; exit 1; }
           done
           ls -la dist
+
+      - name: Copy to static.purplecandy.dev
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          AWS_DEFAULT_REGION: auto
+          # R2 does not take the checksums newer AWS CLIs add to every upload.
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+        run: |
+          for s in R2_ACCOUNT_ID AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
+            [ -n "${!s}" ] || { echo "::error::Missing secret for $s. See the top of release.yml."; exit 1; }
+          done
+          r2=(--endpoint-url "https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com" --only-show-errors)
+
+          # Every file under its version. These never change, so caches can keep them.
+          aws s3 cp dist "$R2_PREFIX/download/$TAG" --recursive "${r2[@]}" \
+            --cache-control "public, max-age=31536000, immutable"
+
+          # A full release also becomes "latest", like GitHub's latest/download/ paths.
+          # The manifests go last, so nothing points at a file before it is there.
+          if [[ "$TAG" != *-* ]]; then
+            latest="$R2_PREFIX/latest/download"
+            short=(--cache-control "public, max-age=300")
+            aws s3 sync dist "$latest" --delete --exclude latest.json --exclude release.json "${r2[@]}" "${short[@]}"
+            aws s3 cp dist/release.json "$latest/release.json" "${r2[@]}" "${short[@]}" --content-type application/json
+            aws s3 cp dist/latest.json "$latest/latest.json" "${r2[@]}" "${short[@]}" --content-type application/json
+          fi
+
+          # Check the public copy answers before the release is published.
+          curl -fsSI "$DOWNLOADS/releases/download/$TAG/SHA256SUMS" > /dev/null \
+            || { echo "::error::$DOWNLOADS does not serve the new files"; exit 1; }
 
       - name: Upload and publish
         run: |
