@@ -1,6 +1,6 @@
 [package]
 name = "ampliflare-audio"
-version = "0.1.0-beta.2"
+version = "1.0.0"
 description = "Simple audio toolkit with on device noise reduction"
 authors = ["Ampliflare"]
 edition = "2021"
