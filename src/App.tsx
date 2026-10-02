@@ -126,10 +126,11 @@ export default function App() {
   // Dev builds can start with files already loaded. See dev_start in jobs.rs.
   useEffect(() => {
     if (!import.meta.env.DEV) return;
-    invoke<{ files: string[]; action: string | null; look: string | null }>("dev_start")
+    invoke<{ files: string[]; action: string | null; look: string | null; marks: number[] }>("dev_start")
       .then((d) => {
         // The look is read once at start, so reload after changing it.
         if (d.look && saveDevLook(d.look)) return location.reload();
+        devMarks.current = d.marks;
         if (d.action) setAction(defaultAction(d.action as ActionKind));
         if (d.files.length > 0) void addPaths(d.files);
       })
@@ -191,8 +192,22 @@ export default function App() {
       );
   }, [isEditor, selected, analyses]);
 
-  // Cut and split points belong to one file. Reset them when another file is picked.
+  // Cut and split points belong to one file. Reset them when another file is
+  // picked, except for the first file of a dev start with marks.
+  const devMarks = useRef<number[]>([]);
   useEffect(() => {
+    const marks = devMarks.current;
+    if (selectedId && marks.length > 0) {
+      devMarks.current = [];
+      setAction((a) =>
+        a.kind === "cut"
+          ? { kind: "cut", start: marks[0], end: marks[1] }
+          : a.kind === "split"
+            ? { kind: "split", points: marks }
+            : a,
+      );
+      return;
+    }
     setAction((a) =>
       a.kind === "cut"
         ? { kind: "cut", start: 0 }

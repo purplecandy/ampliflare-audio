@@ -360,12 +360,15 @@ pub struct DevStart {
     pub files: Vec<String>,
     pub action: Option<String>,
     pub look: Option<String>,
+    /// AMPLIFLARE_DEV_MARKS, like "9.5,46": the cut's start and end, or the
+    /// split points, for the first file.
+    pub marks: Vec<f64>,
 }
 
 #[tauri::command]
 pub fn dev_start() -> DevStart {
     if !cfg!(debug_assertions) {
-        return DevStart { files: vec![], action: None, look: None };
+        return DevStart { files: vec![], action: None, look: None, marks: vec![] };
     }
     let files = std::env::var("AMPLIFLARE_DEV_FILES")
         .map(|v| v.split(':').filter(|s| !s.is_empty()).map(String::from).collect())
@@ -374,6 +377,9 @@ pub fn dev_start() -> DevStart {
         files,
         action: std::env::var("AMPLIFLARE_DEV_ACTION").ok(),
         look: std::env::var("AMPLIFLARE_DEV_LOOK").ok(),
+        marks: std::env::var("AMPLIFLARE_DEV_MARKS")
+            .map(|v| v.split(',').filter_map(|s| s.trim().parse().ok()).collect())
+            .unwrap_or_default(),
     }
 }
 
