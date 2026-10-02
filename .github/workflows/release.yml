@@ -2,7 +2,8 @@
 # copies the files to https://static.purplecandy.dev/ampliflare-audio/ and
 # publishes a GitHub release with the same files.
 # The public copy is what people use: the in-app updater, install.sh and the
-# site's Download button all read it, since the GitHub repo is private.
+# site's Download button all read it. It is faster than GitHub's, and it keeps
+# working if the GitHub repo is ever private again.
 # A tag with a dash, like v0.2.0-beta.1, becomes a pre-release. It is copied
 # under its version only, and the updater only follows the latest full release,
 # so pre-releases never reach users by themselves.
@@ -68,21 +69,28 @@ jobs:
 
       - name: Start a draft release
         run: |
+          # The release notes live on the site, one page per version. A
+          # pre-release has no page of its own, so it points at the newest.
+          ver=${TAG#v}
+          page=${ver//./-}
+          [[ "$TAG" == *-* ]] && page=latest
+          url="$SITE/docs/releases/$page/"
+          # The in-app update note, also used by latest.json.
+          echo "What's new in $ver: $url" > "$RUNNER_TEMP/notes.md"
+          # The GitHub release page, with the same terms as the README.
+          {
+            echo "The [release notes for $ver]($url) have the full write-up."
+            echo
+            echo "These binaries follow Ampliflare Audio's [pricing terms]($SITE/docs/license/): free for personal use, license required for commercial use. The source is AGPL licensed and can be built and run for free, for both personal and commercial use."
+          } > "$RUNNER_TEMP/body.md"
+          cat "$RUNNER_TEMP/notes.md" "$RUNNER_TEMP/body.md"
           # A rerun finds the draft from the last try and keeps going.
           if ! gh release view "$TAG" -R "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
             pre=()
             [[ "$TAG" == *-* ]] && pre=(--prerelease)
             gh release create "$TAG" -R "$GITHUB_REPOSITORY" --draft --verify-tag "${pre[@]}" \
-              --title "Ampliflare Audio ${TAG#v}" --generate-notes
+              --title "Ampliflare Audio $ver" --notes-file "$RUNNER_TEMP/body.md"
           fi
-          # The in-app update note points at the site's release notes, not at
-          # GitHub's commit list, which only people with repo access can open.
-          # A pre-release has no page of its own, so it points at the newest.
-          ver=${TAG#v}
-          page=${ver//./-}
-          [[ "$TAG" == *-* ]] && page=latest
-          echo "What's new in $ver: $SITE/docs/releases/$page/" > "$RUNNER_TEMP/notes.md"
-          cat "$RUNNER_TEMP/notes.md"
 
       - name: Add install script, icon and update manifest
         run: |

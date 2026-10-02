@@ -3,6 +3,8 @@
 A small desktop audio toolkit. Drop in files, pick an action, get clean files back.
 Everything runs on your machine. Nothing is uploaded.
 
+Download it from [ampliflare.purplecandy.dev](https://ampliflare.purplecandy.dev).
+
 What it does today:
 
 - **Remove noise** with DeepFilterNet3, a speech noise reduction model that runs on device
@@ -75,3 +77,14 @@ curl -fsSL https://static.purplecandy.dev/ampliflare-audio/releases/latest/downl
 - Bundle a static ffmpeg so users do not need to install it. Use an LGPL build.
 - Dereverb. Needs a second model and a real inference runtime.
 - Windows testing. CI builds it, but nobody has run it yet. It is not Authenticode signed.
+
+## Contributing
+
+Bug fixes are welcome. Open an issue before starting anything bigger.
+[CONTRIBUTING.md](CONTRIBUTING.md) has the terms a pull request is accepted under.
+
+## License
+
+The source is [AGPL licensed](LICENSE) and can be built and run for free, for both personal and commercial use.
+
+The prebuilt binaries follow Ampliflare Audio's [pricing terms](https://ampliflare.purplecandy.dev/docs/license/): free for personal use, license required for commercial use.

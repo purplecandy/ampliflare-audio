@@ -11,8 +11,8 @@ Two workflows do the work.
 
 ## Where releases live
 
-The GitHub repo is private, so people download from a public copy in the R2
-bucket `static`, served at `https://static.purplecandy.dev/ampliflare-audio/`.
+Every release is on GitHub, with a note on the licensing terms. People
+download from a copy in the R2 bucket `static`, served at `https://static.purplecandy.dev/ampliflare-audio/`.
 It uses the same paths as GitHub:
 
 - `releases/download/v1.0.0/<file>`, every release, never changed after.
