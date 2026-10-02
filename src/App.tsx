@@ -25,6 +25,7 @@ import {
   type SaveTo,
   type Tools,
 } from "./types";
+import { buildNotice, type Notice, type RunResult } from "./notice";
 import "./App.css";
 
 const IS_TAURI = "__TAURI_INTERNALS__" in window;
@@ -35,10 +36,42 @@ const AUDIO_EXTS = [
   "aac",
   "flac",
   "ogg",
+  "oga",
   "opus",
+  "wma",
   "aiff",
   "aif",
-  "wma",
+  "aifc",
+  "caf",
+  "au",
+  "snd",
+  "w64",
+  "amr",
+  "awb",
+  "3ga",
+  "mp2",
+  "mp1",
+  "mka",
+  "weba",
+  "spx",
+  "ac3",
+  "eac3",
+  "dts",
+  "m4b",
+  "m4r",
+  "wv",
+  "ape",
+  "tta",
+  "tak",
+  "mpc",
+  "dsf",
+  "mlp",
+  "thd",
+  "voc",
+  "gsm",
+  "oma",
+  "at3",
+  "ra",
 ];
 
 type AnalysisState =
@@ -79,6 +112,7 @@ export default function App() {
   const [tools, setTools] = useState<Tools | null>(null);
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [notice, setNotice] = useState<Notice | null>(null);
   const [analyses, setAnalyses] = useState<Record<string, AnalysisState>>({});
   const [license, setLicense] = useState<LicenseStatus | null>(null);
   const cancelRef = useRef(false);
@@ -244,6 +278,13 @@ export default function App() {
     setFiles((prev) => prev.filter((f) => f.id !== id));
   }
 
+  /** Keep the files but forget their results, so they can be run again. */
+  function resetAll() {
+    setFiles((prev) =>
+      prev.map((f) => ({ ...f, status: "waiting", step: undefined, outputs: undefined, error: undefined })),
+    );
+  }
+
   async function runAll() {
     if (busy) return;
     const todo = isEditor
@@ -251,7 +292,11 @@ export default function App() {
       : files.filter((f) => f.status !== "done");
     if (todo.length === 0) return;
     setBusy(true);
+    setNotice(null);
     cancelRef.current = false;
+    const saved: RunResult["saved"] = [];
+    const failed: RunResult["failed"] = [];
+    let hitLimit = false;
     for (const f of todo) {
       if (cancelRef.current) break;
       setFiles((prev) =>
@@ -276,8 +321,10 @@ export default function App() {
               : x,
           ),
         );
+        saved.push({ name: f.name, outputs });
       } catch (err) {
         const message = typeof err === "string" ? err : String(err);
+        failed.push({ name: f.name });
         setFiles((prev) =>
           prev.map((x) =>
             x.id === f.id
@@ -289,10 +336,30 @@ export default function App() {
       // Free use stops at the weekly limit. The files left stay waiting.
       const status = await invoke<LicenseStatus>("license_status").catch(() => null);
       if (status) setLicense(status);
-      if (limitReached(status)) break;
+      if (limitReached(status)) {
+        hitLimit = true;
+        break;
+      }
     }
     setBusy(false);
+    setNotice(
+      buildNotice({
+        action,
+        total: todo.length,
+        saved,
+        failed,
+        stopped: cancelRef.current,
+        limitReached: hitLimit,
+      }),
+    );
   }
+
+  // The finished ribbon goes away on its own. A failure stays a little longer.
+  useEffect(() => {
+    if (!notice) return;
+    const t = window.setTimeout(() => setNotice(null), notice.ok ? 5000 : 10000);
+    return () => window.clearTimeout(t);
+  }, [notice]);
 
   const pending = isEditor
     ? selected
@@ -311,13 +378,13 @@ export default function App() {
     !needsFfmpeg &&
     !splitEmpty &&
     !atLimit;
+  const runVerb = TOOLS.find((t) => t.kind === action.kind)!.label;
   const runLabel = atLimit
     ? "Weekly limit reached"
-    : isEditor
-    ? selected
-      ? `${action.kind === "cut" ? "Cut" : "Split"} ${selected.name}`
-      : "Pick a file"
-    : `Run on ${pending} file${pending === 1 ? "" : "s"}`;
+    : pending === 0
+    ? "Pick a file"
+    : `${runVerb} ${pending} file${pending === 1 ? "" : "s"}`;
+  const canReset = !busy && files.some((f) => f.status === "done" || f.status === "error");
 
   const analysis = selected ? analyses[selected.id] : undefined;
 
@@ -357,6 +424,17 @@ export default function App() {
             >
               <Icon name="plus" />
             </button>
+            {canReset && (
+              <button
+                type="button"
+                className="flat circular"
+                aria-label="Reset files"
+                title="Reset files to run again"
+                onClick={resetAll}
+              >
+                <Icon name="reload" />
+              </button>
+            )}
             <button
               type="button"
               className="flat circular"
@@ -389,6 +467,21 @@ export default function App() {
             )}
           </div>
         </header>
+
+        {notice && (
+          <div className={`banner ${notice.ok ? "banner-ok" : ""}`} role="status">
+            <Icon name={notice.ok ? "check" : "warning"} />
+            <span className="banner-text">{notice.text}</span>
+            {notice.reveal && (
+              <button type="button" className="flat" onClick={() => void revealItemInDir(notice.reveal!)}>
+                Open folder
+              </button>
+            )}
+            <button type="button" className="flat circular" aria-label="Dismiss" onClick={() => setNotice(null)}>
+              <Icon name="close" />
+            </button>
+          </div>
+        )}
 
         <UpdateChecker />
 

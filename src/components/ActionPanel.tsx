@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { IconName } from "./Icon";
-import { BITRATES, FORMATS, type Action, type ActionKind } from "../types";
+import { BITRATES, FORMAT_GROUPS, LOSSY_FORMATS, type Action, type ActionKind } from "../types";
 
 interface Props {
   action: Action;
@@ -100,15 +100,19 @@ export function ActionPanel({ action, onChange, disabled, children }: Props) {
                   </div>
                   <div className="control">
                     <select id="format" value={action.format} disabled={disabled} onChange={(e) => onChange({ ...action, format: e.target.value })}>
-                      {FORMATS.map((f) => (
-                        <option key={f} value={f}>
-                          {f}
-                        </option>
+                      {FORMAT_GROUPS.map((g) => (
+                        <optgroup key={g.label} label={g.label}>
+                          {g.formats.map((f) => (
+                            <option key={f} value={f}>
+                              {f}
+                            </option>
+                          ))}
+                        </optgroup>
                       ))}
                     </select>
                   </div>
                 </div>
-                {["mp3", "m4a", "ogg", "opus"].includes(action.format) && (
+                {LOSSY_FORMATS.includes(action.format) && (
                   <div className="row-item">
                     <div className="row-text">
                       <label className="row-title" htmlFor="bitrate">
